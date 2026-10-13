@@ -18,3 +18,12 @@ services:
         value: ".onrender.com"
       - key: CSRF_TRUSTED_ORIGINS
         value: "https://*.onrender.com"
+      # Compte administrateur créé/réinitialisé à chaque déploiement à partir de
+      # ces variables (voir la commande ensure_admin dans seed_portfolio).
+      # Le mot de passe n'est pas stocké ici : Render te le demandera (secret).
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: "nicko"
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: "nickkakaye4@gmail.com"
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false

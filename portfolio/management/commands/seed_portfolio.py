@@ -1,3 +1,6 @@
+import os
+
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from portfolio.models import (
@@ -17,6 +20,7 @@ class Command(BaseCommand):
         self.seed_projects()
         self.seed_certifications()
         self.seed_training()
+        self.ensure_admin()
         self.stdout.write(self.style.SUCCESS("Contenu du portfolio chargé."))
 
     def seed_profile(self):
@@ -173,3 +177,23 @@ class Command(BaseCommand):
         ]
         for i, (title, desc) in enumerate(items, start=1):
             TrainingItem.objects.update_or_create(order=i, defaults={"title": title, "description": desc})
+
+    def ensure_admin(self):
+        """Crée (ou réinitialise) le compte administrateur à partir de variables
+        d'environnement. Utile sur un hébergeur sans accès terminal (Render).
+        Sans DJANGO_SUPERUSER_PASSWORD, la commande ne touche à rien."""
+        password = os.environ.get("DJANGO_SUPERUSER_PASSWORD")
+        if not password:
+            return
+        User = get_user_model()
+        username = os.environ.get("DJANGO_SUPERUSER_USERNAME", "nicko")
+        email = os.environ.get("DJANGO_SUPERUSER_EMAIL", "")
+        user, created = User.objects.get_or_create(username=username, defaults={"email": email})
+        if email:
+            user.email = email
+        user.is_staff = True
+        user.is_superuser = True
+        user.set_password(password)
+        user.save()
+        action = "créé" if created else "réinitialisé"
+        self.stdout.write(self.style.SUCCESS(f"Compte administrateur « {username} » {action}."))
