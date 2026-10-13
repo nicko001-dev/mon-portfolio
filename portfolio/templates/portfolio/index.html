@@ -1,0 +1,197 @@
+{% extends "portfolio/base.html" %}
+{% load static %}
+{% block content %}
+
+<canvas id="pcanvas" aria-hidden="true"></canvas>
+
+<section id="home" class="home-section">
+  <div class="home-media" aria-hidden="true">
+    <video
+      id="heroVideo"
+      class="home-video"
+      muted
+      autoplay
+      playsinline
+      preload="auto"
+    >
+      <source
+        src="https://strvid.nyc3.cdn.digitaloceanspaces.com/cloudinary/portfolio_hero_bg_zuhahj.webm"
+        type="video/webm"
+      />
+    </video>
+    <div class="home-media-overlay"></div>
+  </div>
+
+  <div class="home-body">
+    <div class="home-text">
+      <span class="home-greet up d1">Bonjour, je suis</span>
+      <h1 class="home-title up d2">{{ profile.name }}</h1>
+      <p class="home-sub up d3">{{ profile.role }}</p>
+      <div class="home-cta up d4">
+        <a class="btn" href="#projects">Voir mes projets</a>
+        <a class="btn btn-ghost" href="mailto:{{ profile.email }}">Me contacter</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="home-foot up d4">
+    <div class="home-avail">
+      <span class="home-dot" aria-hidden="true"></span>
+      <span class="home-avail-text">
+        <b>Disponible pour un stage</b>
+        {{ profile.looking_for|capfirst }}
+      </span>
+    </div>
+    <div class="home-scroll" aria-hidden="true">
+      <span class="home-mouse"><i></i></span>
+    </div>
+  </div>
+</section>
+
+<section id="space-runway" aria-label="Espace 3D interactif">
+  <div class="space-sticky">
+    <canvas id="three-canvas" aria-hidden="true"></canvas>
+    <div class="space-copy">
+      <h2>Applications intelligentes</h2>
+      <p>
+        IA embarquée, mobile et vision par ordinateur — des projets pensés de
+        bout en bout, souvent sans connexion.
+      </p>
+      <a class="btn" href="#projects">Découvrir mes projets</a>
+    </div>
+  </div>
+</section>
+
+<section id="hero-runway">
+  <div class="hero-sticky">
+    <div class="hero-copy">
+      <h1 class="sr-only">{{ profile.name }} — {{ profile.role }}, {{ profile.school }}</h1>
+      {% for stage in hero_stages %}
+        {% if stage.shape == "dissolve" %}
+        <div class="hstage center" data-shape="dissolve">
+          <div class="pstate">
+            {% for line in problem_statements %}
+            <p class="pline">{{ line.text }}</p>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <div class="hstage {% if forloop.counter == 2 or stage.shape == 'lightbulb' %}right{% else %}left{% endif %}" data-shape="{{ stage.shape }}">
+          {% if stage.eyebrow %}<p class="h-eyebrow">{{ stage.eyebrow }}</p>{% endif %}
+          <p class="h-title">{{ stage.title }}</p>
+          <p class="h-body">{{ stage.body }}</p>
+          {% if stage.cta_label %}<a class="btn h-cta" href="{{ stage.cta_href }}">{{ stage.cta_label }}</a>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="hero-cue" id="hero-cue" aria-hidden="true"><i></i><span>Défiler</span></div>
+  </div>
+</section>
+
+<section id="skills" data-reveal>
+  <div class="container">
+    <div class="sec-head">
+      <p class="sec-eyebrow">Boîte à outils</p>
+      <h2 class="sec-title">Compétences</h2>
+    </div>
+    <div class="skill-grid">
+      {% for g in skill_groups %}
+      <div class="skill-cell"><h3>{{ g.name }}</h3><p>{{ g.description }}</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section id="training" data-reveal>
+  <div class="container" style="max-width:820px">
+    <div class="sec-head">
+      <p class="sec-eyebrow">Diplôme en cours</p>
+      <h2 class="sec-title">{{ profile.program }}</h2>
+      <p class="tr-meta">{{ profile.school }} — {{ profile.program_year }}</p>
+    </div>
+    <div class="tr-list">
+      {% for t in training_items %}
+      <div class="tr-row"><h3>{{ t.title }}</h3><p>{{ t.description }}</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section id="projects">
+  <div id="proj-runway">
+    <div class="proj-sticky">
+      <div class="container">
+        <div class="proj-left">
+          <p class="sec-eyebrow">Travaux récents</p>
+          <h2 class="sec-title">Mes projets</h2>
+          <p class="sec-sub">Construits de bout en bout, souvent en partant de zéro dans le domaine. Faites défiler pour les parcourir.</p>
+          <div class="proj-count">
+            <span class="proj-num" id="proj-num">1 / {{ projects|length }}</span>
+            <div class="proj-dots">
+              {% for p in projects %}<i class="{% if forloop.first %}on{% endif %}"></i>{% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="proj-stage">
+          {% for p in projects %}
+          <article class="proj-card {% if forloop.first %}on{% endif %}">
+            <span class="proj-mono" aria-hidden="true">{{ p.monogram }}</span>
+            <span class="proj-tag">{{ p.tag }}</span>
+            <h3>{{ p.title }}</h3>
+            <p class="proj-kind">{{ p.kind }}</p>
+            <p class="proj-desc">{{ p.description }}</p>
+            <p class="proj-stack">{{ p.stack }}</p>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="certs" data-reveal>
+  <div class="container">
+    <div class="sec-head">
+      <p class="sec-eyebrow">Reconnaissances</p>
+      <h2 class="sec-title">Mes certifications</h2>
+      <p class="sec-sub">Cinq certificats Cisco Networking Academy obtenus en 2026. Cliquez pour voir le document.</p>
+    </div>
+    <div class="cert-list">
+      {% for c in certifications %}
+      <div class="cert-item">
+        <button class="cert-btn" type="button"
+                data-full="{% static c.image_full %}"
+                data-thumb="{% static c.image_thumb %}"
+                data-title="{{ c.title }}" data-org="{{ c.org }}" data-date="{{ c.date }}"
+                aria-label="Voir le certificat : {{ c.title }}, {{ c.org }}, {{ c.date }}">
+          <svg class="tri" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 20H3Z" fill="none" stroke="{% cycle '#eab54d' '#8b5cf6' '#2dd4bf' '#f472b6' '#eab54d' %}" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span><b>{{ c.title }}</b><span>{{ c.org }} — {{ c.date }}</span></span>
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section id="cta">
+  <canvas id="cta-canvas" aria-hidden="true"></canvas>
+  <div class="cta-inner">
+    <p class="sec-eyebrow" style="justify-content:center">Une idée, un projet</p>
+    <h2>{{ profile.looking_for|capfirst }}.<br>Écrivez à {{ profile.name }}.</h2>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a class="btn" href="mailto:{{ profile.email }}">Me contacter</a>
+      <button class="btn" style="background:transparent;border:1px solid var(--hair);box-shadow:none" id="copyBtn" data-email="{{ profile.email }}">
+        <span id="copyLbl">Copier l'adresse</span>
+      </button>
+    </div>
+    <p style="margin-top:22px;color:var(--ink-faint);font-size:13px">{{ profile.location }}</p>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<script src="{% static 'portfolio/js/space3d.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+staticfiles/
+db.sqlite3
+*.log
+.env
+kilo/
+.qodo/
+*.sqlite3-journal
+.DS_Store

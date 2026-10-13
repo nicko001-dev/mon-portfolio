@@ -1,0 +1,191 @@
+{% load static %}
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#07070c" />
+    <title>{% block title %}Nick Kakaye — Portfolio{% endblock %}</title>
+    <meta
+      name="description"
+      content="Nick Kakaye — étudiant Système Informatique et Génie Logiciel à l'ESATIC (Abidjan). IA locale, développement mobile et logiciels construits de bout en bout."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307070c'/%3E%3Cpath d='M32 14 46 38 32 50 18 38Z' fill='none' stroke='%238b5cf6' stroke-width='2.5'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="{% static 'portfolio/css/style.css' %}" />
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body>
+    <div class="starfield" aria-hidden="true"></div>
+    <canvas id="stars-canvas" aria-hidden="true"></canvas>
+    <div class="drift-layer" aria-hidden="true">
+      {% for t in "0123456789abcdef" %}
+      <span class="drift drift-{{ forloop.counter0 }}"></span>
+      {% endfor %}
+    </div>
+
+    <header id="site-header">
+      <div class="container">
+        <a class="brand" href="{% url 'portfolio:index' %}">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <path
+              d="M16 5 28 16 16 27 4 16Z"
+              fill="none"
+              stroke="#8b5cf6"
+              stroke-width="2"
+            />
+            <path d="M16 12 21 16 16 20 11 16Z" fill="#8b5cf6" />
+          </svg>
+          Nick Kakaye
+        </a>
+        <nav class="nav-links" aria-label="Navigation principale">
+          <a href="#projects">Projets</a>
+          <a href="#skills">Compétences</a>
+          <a href="#certs">Certifications</a>
+        </nav>
+        <div class="hdr-actions">
+          <button
+            class="avatar-chip avatar-trigger"
+            type="button"
+            data-full="{% static profile.photo_full %}"
+            data-title="{{ profile.name }}"
+            data-org="{{ profile.role }} — {{ profile.school }}"
+            aria-label="Voir la photo de {{ profile.name }}"
+          >
+            <img
+              src="{% static profile.photo_thumb %}"
+              alt=""
+              decoding="async"
+            />
+          </button>
+          <a class="btn" href="mailto:{{ profile.email }}">Me contacter</a>
+          <button
+            class="hamb"
+            id="hambbtn"
+            type="button"
+            aria-label="Ouvrir le menu"
+          >
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="progress-rail" id="progress-rail" aria-hidden="true">
+      <i></i>
+    </div>
+
+    <div id="drawer" aria-hidden="true">
+      <div class="drawer-bg" id="drawerbg"></div>
+      <nav class="drawer-panel" aria-label="Menu">
+        <button
+          class="drawer-close"
+          id="drawerclose"
+          type="button"
+          aria-label="Fermer le menu"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+        <a href="#home">Accueil</a>
+        <a href="#projects">Projets</a>
+        <a href="#skills">Compétences</a>
+        <a href="#training">Formation</a>
+        <a href="#certs">Certifications</a>
+        <a href="#cta">Contact</a>
+      </nav>
+    </div>
+
+    {% block content %}{% endblock %}
+
+    <footer>
+      <div class="container">
+        <p>© 2026 {{ profile.name }}. Conçu et développé.</p>
+        <a href="mailto:{{ profile.email }}">{{ profile.email }}</a>
+      </div>
+    </footer>
+
+    <div
+      class="lb"
+      id="lb"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-label="Visionneuse"
+    >
+      <div class="lb-bg" id="lbbg"></div>
+      <figure class="lb-fig">
+        <img id="lbimg" alt="" />
+        <figcaption class="lb-cap">
+          <b id="lbt"></b><span id="lbm"></span>
+        </figcaption>
+      </figure>
+      <button
+        class="lb-btn lb-close"
+        id="lbx"
+        type="button"
+        aria-label="Fermer"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </button>
+      <button
+        class="lb-btn lb-prev"
+        id="lbp"
+        type="button"
+        aria-label="Précédent"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m15 5-7 7 7 7" />
+        </svg>
+      </button>
+      <button
+        class="lb-btn lb-next"
+        id="lbn"
+        type="button"
+        aria-label="Suivant"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m9 5 7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+    <script src="{% static 'portfolio/js/main.js' %}" defer></script>
+  </body>
+</html>
