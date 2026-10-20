@@ -2,196 +2,382 @@
 {% load static %}
 {% block content %}
 
-<canvas id="pcanvas" aria-hidden="true"></canvas>
+<!-- ============================================================
+     Application Portfolio — Architecture 3 Écrans (UI A / B / C)
+     Pas de défilement entre les 3 parties.
+     Navigation par le bouton d'entrée, le trou noir et les boutons retour.
+     ============================================================ -->
+<div id="portfolio-app" class="app-ui-a">
 
-<section id="home" class="home-section">
-  <div class="home-media" aria-hidden="true">
-    <video
-      id="heroVideo"
-      class="home-video"
-      muted
-      autoplay
-      playsinline
-      preload="auto"
-    >
-      <source
-        src="https://strvid.nyc3.cdn.digitaloceanspaces.com/cloudinary/portfolio_hero_bg_zuhahj.webm"
-        type="video/webm"
-      />
-    </video>
-    <div class="home-media-overlay"></div>
-  </div>
+  <!-- ─────────────────────────────────────────────────────────
+       UI A — Accueil Cinématique avec Vidéo d'introduction
+       ───────────────────────────────────────────────────────── -->
+  <section id="ui-a" class="ui-panel home-section">
+    <div class="home-media" aria-hidden="true">
+      <video
+        id="heroVideo"
+        class="home-video"
+        muted
+        autoplay
+        playsinline
+        preload="auto"
+      >
+        <source
+          src="https://strvid.nyc3.cdn.digitaloceanspaces.com/cloudinary/portfolio_hero_bg_zuhahj.webm"
+          type="video/webm"
+        />
+      </video>
+      <div class="home-media-overlay"></div>
+    </div>
 
-  <div class="home-body">
-    <div class="home-text">
-      <span class="home-greet up d1">Bonjour, je suis</span>
-      <h1 class="home-title up d2">{{ profile.name }}</h1>
-      <p class="home-sub up d3">{{ profile.role }}</p>
-      <div class="home-cta up d4">
-        <a class="btn" href="#projects">Voir mes projets</a>
-        <a class="btn btn-ghost" href="mailto:{{ profile.email }}">Me contacter</a>
+    <div class="home-body">
+      <div class="home-text">
+        <span class="home-greet up d1">{{ txt.home_greet|default:"Bonjour, je suis" }}</span>
+        <h1 class="home-title up d2">{{ profile.name }}</h1>
+        <p class="home-sub up d3">{{ profile.role }}</p>
+        <div class="home-cta up d4">
+          <button id="btn-enter-universe" class="btn btn-enter-universe" type="button" aria-label="Entrer dans mon univers">
+            <span class="universe-pulse-dot" aria-hidden="true"></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 3a9 9 0 0 1 9 9"/>
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            </svg>
+            {{ txt.home_title_enter|default:"Entrer dans mon univers" }}
+          </button>
+          <a class="btn btn-ghost" href="mailto:{{ profile.email }}">{{ txt.home_cta2|default:"Me contacter" }}</a>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="home-foot up d4">
-    <div class="home-avail">
-      <span class="home-dot" aria-hidden="true"></span>
-      <span class="home-avail-text">
-        <b>Disponible pour un stage</b>
-        {{ profile.looking_for|capfirst }}
-      </span>
+    <div class="home-foot up d4">
+      <div class="home-avail">
+        <span class="home-dot" aria-hidden="true"></span>
+        <span class="home-avail-text">
+          <b>{{ txt.home_avail|default:"Disponible pour un stage" }}</b>
+          {{ profile.looking_for|capfirst }}
+        </span>
+      </div>
     </div>
-    <div class="home-scroll" aria-hidden="true">
-      <span class="home-mouse"><i></i></span>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section id="space-runway" aria-label="Espace 3D interactif">
-  <div class="space-sticky">
-    <canvas id="three-canvas" aria-hidden="true"></canvas>
-    <div class="space-copy">
-      <h2>Applications intelligentes</h2>
-      <p>
-        IA embarquée, mobile et vision par ordinateur — des projets pensés de
-        bout en bout, souvent sans connexion.
-      </p>
-      <a class="btn" href="#projects">Découvrir mes projets</a>
-    </div>
-  </div>
-</section>
+  <!-- ─────────────────────────────────────────────────────────
+       UI B — Univers 3D Interactif (Base « lilo »)
+       Quête : Trouver le trou noir pour entrer dans l'Atelier (UI C)
+       ───────────────────────────────────────────────────────── -->
+  <section id="ui-b" class="ui-panel ui-universe" aria-label="Univers 3D interactif">
+    <!-- Toile WebGL hyperspace -->
+    <canvas id="hs-canvas" aria-hidden="true"></canvas>
 
-<section id="hero-runway">
-  <div class="hero-sticky">
-    <div class="hero-copy">
-      <h1 class="sr-only">{{ profile.name }} — {{ profile.role }}, {{ profile.school }}</h1>
-      {% for stage in hero_stages %}
-        {% if stage.shape == "dissolve" %}
-        <div class="hstage center" data-shape="dissolve">
-          <div class="pstate">
-            {% for line in problem_statements %}
-            <p class="pline">{{ line.text }}</p>
+    <!-- Barre supérieure : Bouton retour accueil + Pilule de quête Trou Noir -->
+    <div class="hs-nav-top">
+      <button id="hs-btn-home" class="hs-btn-glass" type="button" aria-label="Retour à l'accueil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        <span>{{ txt.hs_back_home|default:"Accueil" }}</span>
+      </button>
+
+      <!-- Balise de quête principale épurée avec flèche de guidage -->
+      <div class="hs-quest-pill" id="hs-quest-pill" role="status">
+        <span class="quest-arrow" id="hs-quest-arrow" aria-hidden="true">➤</span>
+        <div class="quest-text">
+          <span class="quest-title">{{ txt.hs_quest_title|default:"TROU NOIR" }}</span>
+          <span class="quest-dist" id="hs-bh-dist">— u</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transmission planétaire HUD discrète en haut (non encombrante) -->
+    <div id="planet-hud-card" class="planet-hud-card" aria-live="polite">
+      <div class="ph-header">
+        <span class="ph-badge" id="ph-badge">{{ txt.hs_transmission|default:"TRANSMISSION STELLAIRE" }}</span>
+        <span class="ph-name" id="ph-name">{{ txt.hs_planet_default|default:"PLANÈTE" }}</span>
+      </div>
+      <p class="ph-desc" id="ph-desc">Détails</p>
+    </div>
+
+    <!-- Interface HUD du vaisseau (en bas) -->
+    <div class="hs-hud" id="hs-hud">
+      <div class="hs-hud-left">
+        <div class="hud-box controls-guide">
+          <div class="cg-desk">
+            <span class="hud-tag">{{ txt.hs_cmds_pc_tag|default:"[COMMANDES PC]" }}</span><br>
+            <b>[MOLETTE]</b> Propulsion · <b>[ZQSD / WASD]</b> Translation<br>
+            <b>[CLIC + GLISSER]</b> Vue 360° · <b>[ESPACE / C]</b> Monter / Descendre<br>
+            <b>[MAJ]</b> Turbo · <b>[M]</b> Son
+          </div>
+          <div class="cg-touch">
+            <span class="hud-tag">{{ txt.hs_cmds_touch_tag|default:"[COMMANDES TACTILES]" }}</span><br>
+            <b>[JOYSTICK]</b> Déplacement · <b>[GLISSER]</b> Regarder autour à 360°<br>
+            <b>[▲ / ▼]</b> Hauteur
+          </div>
+        </div>
+      </div>
+
+      <div class="hs-hud-right">
+        <div class="hud-box hud-stats">
+          <div id="hs-target-info" class="hs-stat-line">{{ txt.hs_target_label|default:"CIBLE" }}: —</div>
+          <div id="hs-speedometer" class="hs-stat-line">{{ txt.hs_speed_label|default:"VITESSE" }}: 0.00</div>
+          <div class="radar-wrap">
+            <canvas id="hs-radar" width="100" height="100" aria-label="Radar spatial"></canvas>
+            <span class="radar-legend">{{ txt.hs_radar_legend|default:"RADAR STELLAIRE" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Joystick virtuel pour mobile (pouce gauche) -->
+    <div class="hs-joy" id="hs-joy" aria-hidden="true">
+      <div class="hs-joy-ring"></div>
+      <div class="hs-joy-knob" id="hs-joy-knob"></div>
+    </div>
+
+    <!-- Contrôles d'altitude mobile (pouce droit) -->
+    <div class="hs-mobile-altitude" id="hs-mobile-altitude" aria-hidden="true">
+      <button class="hs-alt-btn" id="hs-joy-up" type="button" aria-label="Monter">▲</button>
+      <button class="hs-alt-btn" id="hs-joy-down" type="button" aria-label="Descendre">▼</button>
+    </div>
+
+    <!-- Notifications flottantes dans l'espace -->
+    <div id="hs-toasts" class="hs-toasts" aria-live="polite"></div>
+
+    <!-- Écran de flash lors du passage dans le trou noir -->
+    <div class="hs-flash" id="hs-flash" aria-hidden="true"></div>
+    <div class="hs-boot" id="hs-boot" aria-hidden="true"><i></i></div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────
+       UI C — L'Atelier (La partie qui ferme la marche)
+       Défilement interne avec bande défilante, projets, compétences, etc.
+       ───────────────────────────────────────────────────────── -->
+  <section id="ui-c" class="ui-panel ui-atelier" aria-label="Atelier — sections finales">
+    
+    <!-- Dock flottant fixe en bas au centre (inratable, compact, jamais superposé avec le haut) -->
+    <nav class="atelier-nav-bar" id="atelier-nav-bar" aria-label="Navigation de retour">
+      <button class="tt-btn tt-hometop" id="btn-return-home" type="button" aria-label="Revenir à l'accueil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-btn-lbl-full">{{ txt.atelier_home|default:"Revenir à l'accueil" }}</span>
+        <span class="nav-btn-lbl-short">Accueil</span>
+      </button>
+
+      <button class="tt-btn tt-universe" id="btn-return-universe" type="button" aria-label="Retourner dans mon univers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8"/>
+          <path d="M12 8v8M8 12h8"/>
+        </svg>
+        <span class="nav-btn-lbl-full">{{ txt.atelier_universe|default:"Retourner dans mon univers" }}</span>
+        <span class="nav-btn-lbl-short">Univers</span>
+      </button>
+    </nav>
+
+    <canvas id="core-canvas" aria-hidden="true"></canvas>
+
+    <div class="lilo" id="lilo">
+      <div class="lilo-grain" aria-hidden="true"></div>
+      <div class="lilo-vignette" aria-hidden="true"></div>
+
+      <!-- Bande défilante -->
+      <span id="atelier" aria-hidden="true"></span>
+      <div class="marquee" aria-hidden="true">
+        <div class="marquee-track">
+          {% for m in marquee_items %}<span>{{ m.text }}</span><span>&#9670;</span>{% endfor %}
+          {% for m in marquee_items %}<span>{{ m.text }}</span><span>&#9670;</span>{% endfor %}
+        </div>
+      </div>
+
+      <!-- 01 / Manifeste -->
+      <section class="lilo-section lilo-intro" id="lilo-intro" data-lilo="0">
+        <div class="container">
+          <p class="lilo-tag" data-reveal>{{ txt.lilo_intro_tag|default:"01 / L'atelier" }}</p>
+          <h2 class="lilo-h" data-split>{{ txt.lilo_intro_h1|default:"Je fabrique" }}</h2>
+          <h2 class="lilo-h outline" data-split>{{ txt.lilo_intro_h2|default:"pour comprendre" }}</h2>
+          <p class="lilo-lead" data-reveal>{{ profile.bio_p1 }}</p>
+          <div class="lilo-stats">
+            {% for s in manifesto_stats %}
+            <div class="lilo-stat" data-reveal style="--rd:{{ forloop.counter0 }}00ms"><b data-count="{{ s.value }}">0</b><span>{{ s.label }}</span></div>
+            {% empty %}
+            <div class="lilo-stat" data-reveal><b data-count="{{ profile.stat_projects }}">0</b><span>Projets menés</span></div>
+            <div class="lilo-stat" data-reveal style="--rd:.1s"><b data-count="{{ profile.stat_certifications }}">0</b><span>Certifications</span></div>
+            <div class="lilo-stat" data-reveal style="--rd:.2s"><b data-count="{{ profile.stat_technologies }}">0</b><span>Technologies</span></div>
+            <div class="lilo-stat" data-reveal style="--rd:.3s"><b data-count="{{ profile.stat_years }}">0</b><span>Années d'atelier</span></div>
             {% endfor %}
           </div>
         </div>
-        {% else %}
-        <div class="hstage {% if forloop.counter == 2 or stage.shape == 'lightbulb' %}right{% else %}left{% endif %}" data-shape="{{ stage.shape }}">
-          {% if stage.eyebrow %}<p class="h-eyebrow">{{ stage.eyebrow }}</p>{% endif %}
-          <p class="h-title">{{ stage.title }}</p>
-          <p class="h-body">{{ stage.body }}</p>
-          {% if stage.cta_label %}<a class="btn h-cta" href="{{ stage.cta_href }}">{{ stage.cta_label }}</a>{% endif %}
-        </div>
-        {% endif %}
-      {% endfor %}
-    </div>
-    <div class="hero-cue" id="hero-cue" aria-hidden="true"><i></i><span>Défiler</span></div>
-  </div>
-</section>
+      </section>
 
-<section id="skills" data-reveal>
-  <div class="container">
-    <div class="sec-head">
-      <p class="sec-eyebrow">Boîte à outils</p>
-      <h2 class="sec-title">Compétences</h2>
-    </div>
-    <div class="skill-grid">
-      {% for g in skill_groups %}
-      <div class="skill-cell"><h3>{{ g.name }}</h3><p>{{ g.description }}</p></div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<section id="training" data-reveal>
-  <div class="container" style="max-width:820px">
-    <div class="sec-head">
-      <p class="sec-eyebrow">Diplôme en cours</p>
-      <h2 class="sec-title">{{ profile.program }}</h2>
-      <p class="tr-meta">{{ profile.school }} — {{ profile.program_year }}</p>
-    </div>
-    <div class="tr-list">
-      {% for t in training_items %}
-      <div class="tr-row"><h3>{{ t.title }}</h3><p>{{ t.description }}</p></div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-
-<section id="projects">
-  <div id="proj-runway">
-    <div class="proj-sticky">
-      <div class="container">
-        <div class="proj-left">
-          <p class="sec-eyebrow">Travaux récents</p>
-          <h2 class="sec-title">Mes projets</h2>
-          <p class="sec-sub">Construits de bout en bout, souvent en partant de zéro dans le domaine. Faites défiler pour les parcourir.</p>
-          <div class="proj-count">
-            <span class="proj-num" id="proj-num">1 / {{ projects|length }}</span>
-            <div class="proj-dots">
-              {% for p in projects %}<i class="{% if forloop.first %}on{% endif %}"></i>{% endfor %}
-            </div>
+      <!-- 02 / Ce qui m'anime -->
+      <section class="lilo-section lilo-metier" id="lilo-metier" data-lilo="1">
+        <div class="container">
+          <p class="lilo-tag" data-reveal>{{ txt.metier_tag|default:"02 / Ce qui m'anime" }}</p>
+          <div class="lilo-lines">
+            {% for f in focus_items %}
+            <article class="lilo-line" data-reveal style="--rd:{{ forloop.counter0 }}00ms">
+              <span class="lnum">{{ forloop.counter|stringformat:"02d" }}</span>
+              <h3 class="l-title">{{ f.title }}</h3>
+              <p class="l-body">{{ f.body }}</p>
+            </article>
+            {% empty %}
+            <article class="lilo-line" data-reveal>
+              <span class="lnum">01</span>
+              <h3 class="l-title">Faire jaillir les idées.</h3>
+              <p class="l-body">Second Brain, Jarvis, la reconnaissance de gestes : autant d'expériences pour donner une intelligence locale et réactive à des objets du quotidien.</p>
+            </article>
+            <article class="lilo-line" data-reveal style="--rd:.1s">
+              <span class="lnum">02</span>
+              <h3 class="l-title">Un métier sans frontières.</h3>
+              <p class="l-body">Mobile, web, jeu vidéo, réseaux : je navigue entre les briques techniques pour donner vie à une idée, quel que soit le terrain.</p>
+            </article>
+            {% endfor %}
           </div>
         </div>
-        <div class="proj-stage">
-          {% for p in projects %}
-          <article class="proj-card {% if forloop.first %}on{% endif %}">
-            <span class="proj-mono" aria-hidden="true">{{ p.monogram }}</span>
-            <span class="proj-tag">{{ p.tag }}</span>
-            <h3>{{ p.title }}</h3>
-            <p class="proj-kind">{{ p.kind }}</p>
-            <p class="proj-desc">{{ p.description }}</p>
-            <p class="proj-stack">{{ p.stack }}</p>
-          </article>
-          {% endfor %}
+      </section>
+
+      <!-- 03 / Compétences -->
+      <section class="lilo-section" id="skills" data-lilo="2">
+        <div class="container">
+          <p class="lilo-tag" data-reveal>{{ txt.skills_tag|default:"03 / Boîte à outils" }}</p>
+          <h2 class="lilo-h2" data-split>{{ txt.skills_title|default:"Compétences" }}</h2>
+          <div class="rows">
+            {% for g in skill_groups %}
+            <div class="row" data-reveal>
+              <span class="num">{{ forloop.counter|stringformat:"02d" }}</span>
+              <h3>{{ g.name }}</h3>
+              <p>{{ g.description }}</p>
+              <span class="plus" aria-hidden="true">+</span>
+            </div>
+            {% endfor %}
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+      </section>
 
-<section id="certs" data-reveal>
-  <div class="container">
-    <div class="sec-head">
-      <p class="sec-eyebrow">Reconnaissances</p>
-      <h2 class="sec-title">Mes certifications</h2>
-      <p class="sec-sub">Cinq certificats Cisco Networking Academy obtenus en 2026. Cliquez pour voir le document.</p>
-    </div>
-    <div class="cert-list">
-      {% for c in certifications %}
-      <div class="cert-item">
-        <button class="cert-btn" type="button"
-                data-full="{% static c.image_full %}"
-                data-thumb="{% static c.image_thumb %}"
-                data-title="{{ c.title }}" data-org="{{ c.org }}" data-date="{{ c.date }}"
-                aria-label="Voir le certificat : {{ c.title }}, {{ c.org }}, {{ c.date }}">
-          <svg class="tri" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 20H3Z" fill="none" stroke="{% cycle '#eab54d' '#8b5cf6' '#2dd4bf' '#f472b6' '#eab54d' %}" stroke-width="2" stroke-linejoin="round"/></svg>
-          <span><b>{{ c.title }}</b><span>{{ c.org }} — {{ c.date }}</span></span>
-        </button>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+      <!-- 04 / Formation -->
+      <section class="lilo-section" id="training" data-lilo="3">
+        <div class="container">
+          <p class="lilo-tag" data-reveal>{{ txt.training_tag|default:"04 / Diplôme en cours" }}</p>
+          <h2 class="lilo-h2" data-split>{{ profile.program }}</h2>
+          <p class="lilo-lead" data-reveal>{{ profile.school }} — {{ profile.program_year }}</p>
+          <div class="rows">
+            {% for t in training_items %}
+            <div class="row" data-reveal>
+              <span class="num">{{ forloop.counter|stringformat:"02d" }}</span>
+              <h3>{{ t.title }}</h3>
+              <p>{{ t.description }}</p>
+              <span class="plus" aria-hidden="true">+</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
 
-<section id="cta">
-  <canvas id="cta-canvas" aria-hidden="true"></canvas>
-  <div class="cta-inner">
-    <p class="sec-eyebrow" style="justify-content:center">Une idée, un projet</p>
-    <h2>{{ profile.looking_for|capfirst }}.<br>Écrivez à {{ profile.name }}.</h2>
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <a class="btn" href="mailto:{{ profile.email }}">Me contacter</a>
-      <button class="btn" style="background:transparent;border:1px solid var(--hair);box-shadow:none" id="copyBtn" data-email="{{ profile.email }}">
-        <span id="copyLbl">Copier l'adresse</span>
-      </button>
+      <!-- 05 / Travaux -->
+      <section class="lilo-section" id="projects" data-lilo="4">
+        <div class="container">
+          <p class="lilo-tag" data-reveal>{{ txt.projects_tag|default:"05 / Travaux récents" }}</p>
+          <h2 class="lilo-h2" data-split>{{ txt.projects_title|default:"Projets réalisés" }}</h2>
+          <p class="lilo-lead" data-reveal>{{ txt.projects_lead|default:"Construits de bout en bout, souvent en partant de zéro dans le domaine." }}</p>
+          <div class="works">
+            {% for p in projects %}
+            <article class="work" data-reveal>
+              <span class="w-num">{{ forloop.counter|stringformat:"02d" }}</span>
+              <div class="w-main">
+                <h3 class="w-title">{{ p.title }}</h3>
+                <p class="w-kind">{{ p.kind }}</p>
+                <p class="w-desc">{{ p.description }}</p>
+                <p class="w-stack">{{ p.stack }}</p>
+              </div>
+              <span class="w-tag">{{ p.tag }}</span>
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 / Reconnaissances -->
+      <section class="lilo-section" id="certs" data-lilo="5">
+        <div class="container">
+          <p class="lilo-tag" data-reveal>{{ txt.certs_tag|default:"06 / Reconnaissances" }}</p>
+          <h2 class="lilo-h2" data-split>{{ txt.certs_title|default:"Certifications" }}</h2>
+          <p class="lilo-lead" data-reveal>{{ txt.certs_lead|default:"Cinq certificats obtenus en 2026. Cliquez pour voir le document." }}</p>
+          <div class="cert-list">
+            {% for c in certifications %}
+            <div class="cert-item">
+              <button class="cert-btn" type="button"
+                      data-full="{% static c.image_full %}"
+                      data-thumb="{% static c.image_thumb %}"
+                      data-title="{{ c.title }}" data-org="{{ c.org }}" data-date="{{ c.date }}"
+                      aria-label="Voir le certificat : {{ c.title }}, {{ c.org }}, {{ c.date }}">
+                <span class="c-num">{{ forloop.counter|stringformat:"02d" }}</span>
+                <svg class="tri" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 20H3Z" fill="none" stroke="{% cycle '#eab54d' '#8b5cf6' '#2dd4bf' '#f472b6' '#eab54d' %}" stroke-width="2" stroke-linejoin="round"/></svg>
+                <span class="c-txt"><b>{{ c.title }}</b><span>{{ c.org }} — {{ c.date }}</span></span>
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- 07 / Contact -->
+      <section class="lilo-section lilo-contact" id="cta" data-lilo="6">
+        <div class="container">
+          <p class="lilo-tag" data-reveal>{{ txt.contact_tag|default:"07 / Contact" }}</p>
+          <h2 class="lilo-h2 contact-h" data-split>{{ profile.looking_for|capfirst }}</h2>
+          <a class="mail" href="mailto:{{ profile.email }}" data-reveal>{{ profile.email }}</a>
+          <div class="contact-grid">
+            {% for c in contact_items %}
+            <div data-reveal style="--rd:{{ forloop.counter0 }}0ms">
+              <h4>{{ c.label }}</h4>
+              {% if c.copyable %}
+              <a href="{{ c.href }}">{{ c.value }}</a>
+              <button class="copy-link" id="copyBtn" data-email="{{ c.href }}" type="button">
+                <span id="copyLbl">{{ txt.contact_copy|default:"Copier l'adresse" }}</span>
+              </button>
+              {% elif c.is_anchor %}
+              <a href="{{ c.href }}">{{ txt.contact_up|default:"Retour en haut" }} &#8593;</a>
+              {% elif c.is_mail %}
+              <a href="{{ c.href }}">{{ c.value }}</a>
+              {% else %}
+              <p>{{ c.value|linebreaksbr }}</p>
+              {% endif %}
+            </div>
+            {% empty %}
+            <div data-reveal>
+              <h4>École</h4>
+              <p>{{ profile.school }}<br />{{ profile.program }} · {{ profile.program_year }}</p>
+            </div>
+            <div data-reveal style="--rd:.08s">
+              <h4>Où</h4>
+              <p>{{ profile.location }}</p>
+            </div>
+            <div data-reveal style="--rd:.16s">
+              <h4>Écrire</h4>
+              <a href="mailto:{{ profile.email }}">{{ txt.header_cta|default:"Me contacter" }}</a>
+              <button class="copy-link" id="copyBtn" data-email="{{ profile.email }}" type="button">
+                <span id="copyLbl">{{ txt.contact_copy|default:"Copier l'adresse" }}</span>
+              </button>
+            </div>
+            <div data-reveal style="--rd:.24s">
+              <h4>Remonter</h4>
+              <a href="#atelier">{{ txt.contact_up|default:"Retour en haut" }} &#8593;</a>
+            </div>
+            {% endfor %}
+          </div>
+          <p class="lilo-colophon">{{ txt.colophon|default:"Conçu et développé par Nick Kakaye · Abidjan" }}</p>
+        </div>
+      </section>
     </div>
-    <p style="margin-top:22px;color:var(--ink-faint);font-size:13px">{{ profile.location }}</p>
-  </div>
-</section>
+  </section>
+
+</div><!-- /#portfolio-app -->
 
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
-<script src="{% static 'portfolio/js/space3d.js' %}" defer></script>
+{{ hyperspace|json_script:"hs-data" }}
+<script src="{% static 'portfolio/js/three.min.js' %}" defer></script>
+<script src="{% static 'portfolio/js/hyperspace.js' %}" defer></script>
+<script src="{% static 'portfolio/js/core3d.js' %}" defer></script>
 {% endblock %}

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KRISHNA ELITE | HYPER-SPACE PORTFOLIO</title>
+<link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+body,html{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:'Space Mono',monospace}
+canvas{display:block}
+#c canvas{cursor:grab}
+#overlay{position:absolute;inset:0;pointer-events:none;z-index:10;display:flex;flex-direction:column;justify-content:space-between;padding:40px;box-sizing:border-box}
+.hud-top{display:flex;justify-content:space-between;gap:12px;color:#00f2ff;text-transform:uppercase;letter-spacing:3px;font-size:12px;border-top:1px solid rgba(0,242,255,.3);padding-top:10px}
+.project-info{position:absolute;top:50%;left:10%;transform:translateY(-50%);max-width:400px;opacity:0;transition:all .8s cubic-bezier(.16,1,.3,1)}
+.project-info.active{opacity:1;left:12%}
+h1{font-family:'Syncopate',sans-serif;color:#fff;font-size:3rem;margin:0;text-shadow:0 0 20px rgba(0,242,255,.5)}
+.desc{color:#00f2ff;font-size:14px;margin-top:20px;line-height:1.8}
+.hud-bottom{display:flex;justify-content:space-between;align-items:flex-end;color:rgba(255,255,255,.5);font-size:10px;gap:12px}
+.controls-guide{background:rgba(0,242,255,.1);padding:15px;border:1px solid rgba(0,242,255,.3);color:#00f2ff;line-height:1.7}
+#radar{border:1px solid rgba(0,242,255,.3);border-radius:50%;background:rgba(0,20,30,.45)}
+#toasts{position:absolute;top:80px;left:50%;transform:translateX(-50%);text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{background:rgba(0,10,20,.7);border:1px solid #00f2ff;color:#fff;padding:10px 22px;font-size:12px;letter-spacing:2px;box-shadow:0 0 25px rgba(0,242,255,.35)}
+.toast b{color:#00f2ff;font-family:'Syncopate',sans-serif;font-size:14px}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;z-index:50;pointer-events:none}
+#loader{position:fixed;inset:0;background:#000;z-index:100;display:flex;justify-content:center;align-items:center;color:#00f2ff;letter-spacing:4px}
+@media(max-width:700px){h1{font-size:1.8rem}#overlay{padding:20px}.controls-guide{display:none}}
+</style>
+</head>
+<body>
+<div id="loader">SYSTEM INITIALIZATION...</div>
+<div id="flash"></div>
+<div id="overlay">
+  <div class="hud-top">
+    <div>Krishna Architect v5.0</div>
+    <div id="coords">X 0 Y 0 Z 0</div>
+    <div id="speedometer">VELOCITY: 0.00</div>
+  </div>
+  <div id="toasts"></div>
+  <div id="project-display" class="project-info">
+    <h1 id="p-title">NEBULA CORE</h1>
+    <p id="p-desc" class="desc"></p>
+  </div>
+  <div class="hud-bottom">
+    <div class="controls-guide">
+      [MOLETTE] PROPULSION · [ZQSD] DÉPLACEMENT · [MAJ] TURBO<br>
+      [ESPACE / C] MONTER / DESCENDRE<br>
+      [CLIC + GLISSER / FLÈCHES] ORIENTATION · [M] SON
+    </div>
+    <div style="text-align:right;line-height:1.8;color:#00f2ff">
+      <div id="near">CIBLE : —</div>
+      <div id="disc">DÉCOUVERTES : 0 / 0</div>
+      <canvas id="radar" width="130" height="130"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+const TAU=Math.PI*2,R=(a,b)=>a+Math.random()*(b-a),$=id=>document.getElementById(id);
+let scene,camera,renderer,clock,stars,floor,dust,dustP,asteroids,astD,audio=null,found=0,warping=false;
+let yaw=0,pitch=0,drag=false,lx=0,ly=0;
+const keys={},vel=new THREE.Vector3(),projects=[],bodies=[],pois=[],anim=[],rings=[],comets=[],tmpF=new THREE.Vector3(),tmpR=new THREE.Vector3(),tmpD=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0),dummy=new THREE.Object3D();
+let bh;
+
+const projectData=[
+ {title:"QUANTUM ARCH",desc:"Structure monolithique flottante utilisant des shaders de distorsion temporelle.",pos:[0,0,-2000],color:0x00f2ff},
+ {title:"CYBER VEINS",desc:"Réseau de flux de données organiques modélisé en 3D temps réel.",pos:[500,200,-4500],color:0xff0077},
+ {title:"VOID RUNNER",desc:"Expérience de vitesse pure dans un environnement à géométrie variable.",pos:[-500,-100,-7000],color:0x77ff00},
+ {title:"ETHER POINT",desc:"Le centre de gravité de l'univers numérique. Fin de la transmission.",pos:[0,0,-9500],color:0xffaa00}
+];
+
+/* ---------- Textures & helpers ---------- */
+const GT=(()=>{const k=document.createElement('canvas');k.width=k.height=128;const g=k.getContext('2d'),r=g.createRadialGradient(64,64,0,64,64,64);
+ r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.3,'rgba(255,255,255,.35)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(k)})();
+function cloudTex(){const k=document.createElement('canvas');k.width=k.height=128;const g=k.getContext('2d');
+ for(let i=0;i<16;i++){const x=R(30,98),y=R(30,98),s=R(20,50),r=g.createRadialGradient(x,y,0,x,y,s);r.addColorStop(0,'rgba(255,255,255,.35)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,128,128);}
+ return new THREE.CanvasTexture(k)}
+function spr(col,size,op=1,tex=GT){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,color:col,transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));s.scale.set(size,size,1);return s}
+function ptex(cols,b){const k=document.createElement('canvas');k.width=256;k.height=128;const g=k.getContext('2d');
+ for(let y=0;y<128;y++){g.fillStyle=cols[Math.floor((Math.sin(y*b+Math.sin(y*.3)*2)*.5+.5)*cols.length)%cols.length];g.fillRect(0,y,256,1)}
+ for(let i=0;i<420;i++){g.fillStyle=`rgba(${Math.random()<.5?'255,255,255':'0,0,0'},${R(.03,.13)})`;g.beginPath();g.ellipse(R(0,256),R(0,128),R(2,24),R(1,6),0,0,TAU);g.fill()}
+ return new THREE.CanvasTexture(k)}
+function ringGeo(a,b,seg){const g=new THREE.RingGeometry(a,b,seg,1),p=g.attributes.position,uv=g.attributes.uv,v=new THREE.Vector3();
+ for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);uv.setXY(i,(v.length()-a)/(b-a),1)}return g}
+function bandTex(stops,streaks){const k=document.createElement('canvas');k.width=256;k.height=4;const g=k.getContext('2d'),gr=g.createLinearGradient(0,0,256,0);
+ stops.forEach(s=>gr.addColorStop(s[0],s[1]));g.fillStyle=gr;g.fillRect(0,0,256,4);
+ for(let i=0;i<streaks;i++){g.fillStyle=`rgba(0,0,0,${R(.1,.4)})`;g.fillRect(R(0,256),0,R(1,3),4)}return new THREE.CanvasTexture(k)}
+function toast(t,s){const e=document.createElement('div');e.className='toast';e.innerHTML=`<b>${t}</b><br>${s}`;$('toasts').appendChild(e);
+ gsap.fromTo(e,{opacity:0,y:-20},{opacity:1,y:0,duration:.6});gsap.to(e,{opacity:0,delay:4.5,duration:1,onComplete:()=>e.remove()})}
+function addPoi(name,desc,pos,r,body){pois.push({name,desc,pos:pos.isVector3?pos:new THREE.Vector3(...pos),r,found:false});if(body)bodies.push({pos:pois[pois.length-1].pos,r:body})}
+
+/* ---------- Univers ---------- */
+function init(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x000105);scene.fog=new THREE.FogExp2(0x000105,.00012);
+ camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,40000);camera.rotation.order='YXZ';camera.position.set(0,0,300);
+ renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ renderer.domElement.parentNode||document.body.appendChild(renderer.domElement);
+ clock=new THREE.Clock();
+ scene.add(new THREE.AmbientLight(0x334466,.9));
+ const cl=new THREE.PointLight(0x00f2ff,1.2,2000);camera.add(cl);scene.add(camera);
+ createUniverse();
+ addEventListener('wheel',e=>{camera.getWorldDirection(tmpD);vel.addScaledVector(tmpD,e.deltaY*2.2)},{passive:true});
+ addEventListener('keydown',e=>{keys[e.code]=true;startAudio();if(e.code==='KeyM'&&audio){audio.on=!audio.on;audio.mg.gain.setTargetAtTime(audio.on?.35:0,audio.A.currentTime,.3)}if(e.code==='Space')e.preventDefault()});
+ addEventListener('keyup',e=>keys[e.code]=false);
+ addEventListener('pointerdown',e=>{drag=true;lx=e.clientX;ly=e.clientY;startAudio()});
+ addEventListener('pointerup',()=>drag=false);
+ addEventListener('pointermove',e=>{if(!drag)return;yaw-=(e.clientX-lx)*.003;pitch=Math.max(-1.5,Math.min(1.5,pitch-(e.clientY-ly)*.003));lx=e.clientX;ly=e.clientY});
+ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+ $('disc').innerText=`DÉCOUVERTES : 0 / ${pois.length}`;
+ gsap.to('#loader',{opacity:0,duration:2,onComplete:()=>$('loader').style.display='none'});
+ animate();
+}
+
+function planet(o){
+ const g=new THREE.Group();g.position.set(...o.pos);
+ const body=new THREE.Mesh(new THREE.SphereGeometry(o.r,48,32),new THREE.MeshStandardMaterial({map:ptex(o.cols,o.b),roughness:.9,emissive:o.em||0,emissiveIntensity:.5}));g.add(body);
+ g.add(new THREE.Mesh(new THREE.SphereGeometry(o.r*1.12,32,24),new THREE.MeshBasicMaterial({color:o.atm,transparent:true,opacity:.07,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false})));
+ if(o.ring){const rm=new THREE.Mesh(ringGeo(o.r*1.4,o.r*2.4,96),new THREE.MeshBasicMaterial({map:bandTex([[0,'rgba(0,0,0,0)'],[.1,'#d9c39a'],[.35,'#8a7658'],[.5,'rgba(0,0,0,0)'],[.6,'#e8d5ae'],[.9,'#a89070'],[1,'rgba(0,0,0,0)']],30),transparent:true,side:THREE.DoubleSide,depthWrite:false,opacity:.9}));
+  rm.rotation.x=Math.PI/2-.35;rm.rotation.y=.2;g.add(rm)}
+ (o.moons||[]).forEach((m,i)=>{const mm=new THREE.Mesh(new THREE.SphereGeometry(m.r,16,12),new THREE.MeshStandardMaterial({color:m.c,roughness:1}));g.add(mm);
+  const d=o.r*(2.6+i*.9),sp=R(.15,.35),ph=R(0,TAU);anim.push((t)=>mm.position.set(Math.cos(t*sp+ph)*d,Math.sin(t*sp+ph)*d*.15,Math.sin(t*sp+ph)*d))});
+ anim.push((t,dt)=>body.rotation.y+=.03*dt);
+ scene.add(g);addPoi(o.name,o.desc,g.position,o.r,o.r*1.05);
+}
+
+function createUniverse(){
+ // Étoiles
+ const SN=7000,sg=new THREE.BufferGeometry(),sp=new Float32Array(SN*3),sc=new Float32Array(SN*3);
+ for(let i=0;i<SN;i++){sp.set([R(-12000,12000),R(-12000,12000),R(-14000,6000)],i*3);const v=Math.pow(Math.random(),2.5)*.5+.08;sc.set([v*.8,v*.9,v],i*3)}
+ sg.setAttribute('position',new THREE.BufferAttribute(sp,3));sg.setAttribute('color',new THREE.BufferAttribute(sc,3));
+ stars=new THREE.Points(sg,new THREE.PointsMaterial({size:1.6,vertexColors:true,fog:false,sizeAttenuation:false}));scene.add(stars);
+ // Projets
+ projectData.forEach((d,i)=>{
+  const g=new THREE.Group(),m=new THREE.Mesh(new THREE.TorusKnotGeometry(150,40,150,20),new THREE.MeshPhongMaterial({color:0,emissive:d.color,emissiveIntensity:.5,shininess:100,wireframe:i%2===0}));g.add(m);
+  g.add(new THREE.Points(new THREE.SphereGeometry(300,32,32),new THREE.PointsMaterial({color:d.color,size:4,transparent:true,opacity:.1})));
+  g.add(spr(d.color,500,.1));g.position.set(...d.pos);scene.add(g);projects.push({mesh:g,data:d});
+ });
+
+ // Tunnel d'anneaux pulsants
+ for(let i=0;i<20;i++){const r=new THREE.Mesh(new THREE.TorusGeometry(1000,2.5,16,100),new THREE.MeshBasicMaterial({color:0x00f2ff,transparent:true,opacity:.1}));r.position.z=-i*1000;scene.add(r);rings.push(r)}
+
+ // Nébuleuses
+ const cts=[cloudTex(),cloudTex(),cloudTex()],pal=[0x1b4a7a,0x2a3a7a,0x0f5a6a];
+ for(let i=0;i<8;i++){const s=spr(pal[i%3],R(1500,3000),R(.05,.1),cts[i%3]);const sx=Math.random()<.5?-1:1;s.position.set(sx*R(700,4000),R(-1500,1500),R(1000,-11000));s.material.rotation=R(0,TAU);scene.add(s)}
+
+ // Soleil
+ const sunP=new THREE.Vector3(-4200,1500,-1500);
+ const sun=new THREE.Mesh(new THREE.SphereGeometry(400,48,32),new THREE.MeshBasicMaterial({color:0xffe2a0,fog:false}));sun.position.copy(sunP);scene.add(sun);
+ [[0xffcc88,2000,.35],[0xffffff,1200,.8]].forEach(a=>{const s=spr(a[0],a[1],a[2]);s.position.copy(sunP);scene.add(s)});
+ const sl=new THREE.PointLight(0xfff0d0,1.8);sl.position.copy(sunP);scene.add(sl);
+ addPoi('SOLEIL ALPHA','Étoile naine jaune, 5 778 K de pure énergie.',sunP,400,430);
+
+ // Planètes
+ planet({name:'SATURNIA',desc:'Géante aux anneaux de glace et de poussière.',r:240,pos:[1300,100,-1500],cols:['#c8a165','#e3c78f','#a8793f','#d9b87a'],b:.35,atm:0xccaa88,ring:1,moons:[{r:28,c:'#bbbbbb'}]});
+ planet({name:'VERDANIA',desc:'Monde océanique, atmosphère respirable.',r:200,pos:[-900,-600,-900],cols:['#1c4f8f','#2b7bc4','#2f8f4a','#1c4f8f','#eeeeee'],b:.9,atm:0x7799cc,moons:[{r:34,c:'#cccccc'}]});
+ planet({name:'JOVIS-9',desc:'Géante gazeuse, tempêtes vieilles de 400 ans.',r:420,pos:[-2000,-250,-3600],cols:['#d98b5f','#f1d3b0','#9b5a3c','#e8b98d','#7a4a3a'],b:.5,atm:0xaa8866,moons:[{r:40,c:'#c9b79c'},{r:25,c:'#99aabb'}]});
+ planet({name:'IGNIS',desc:'Monde volcanique, océans de lave en fusion.',r:190,pos:[1700,500,-5700],cols:['#1a1210','#3a2218','#5a3524','#241812'],b:1.7,atm:0x886655,em:0x180804});
+ planet({name:'CRYOS',desc:'Planète de glace, aurores permanentes.',r:160,pos:[-1500,350,-6300],cols:['#cfeaff','#9ccbf0','#ffffff','#78a8d8'],b:.8,atm:0x99bbcc,moons:[{r:20,c:'#ffffff'}]});
+
+ // Trou noir
+ bh=new THREE.Group();bh.position.set(2300,-100,-8000);
+ bh.add(new THREE.Mesh(new THREE.SphereGeometry(110,32,24),new THREE.MeshBasicMaterial({color:0x000000})));
+ bh.add(new THREE.Mesh(new THREE.TorusGeometry(122,5,16,100),new THREE.MeshBasicMaterial({color:0xffe9b0})));
+ const disk=new THREE.Mesh(ringGeo(150,560,128),new THREE.MeshBasicMaterial({map:bandTex([[0,'#ffffff'],[.25,'#c9b48a'],[.65,'rgba(90,70,60,.5)'],[1,'rgba(0,0,0,0)']],50),transparent:true,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+ disk.rotation.x=Math.PI/2.15;bh.add(disk);bh.add(spr(0xffaa66,1000,.12));scene.add(bh);
+ anim.push((t,dt)=>disk.rotation.z+=.35*dt);
+ addPoi('SINGULARITÉ','Trou noir. Son horizon des événements est un aller simple.',bh.position,110,0);
+
+ // Galaxie spirale
+ const N=14000,gp=new Float32Array(N*3),gc=new Float32Array(N*3),ca=new THREE.Color(0xc8b8a0),cb=new THREE.Color(0x7088b8),cc=new THREE.Color();
+ for(let i=0;i<N;i++){const r=Math.pow(Math.random(),.6)*2200,ang=(i%3)/3*TAU+r*.0028,s=(1-r/2600)*140+10;
+  gp.set([Math.cos(ang)*r+(Math.random()-.5)*s*3,(Math.random()-.5)*s,Math.sin(ang)*r+(Math.random()-.5)*s*3],i*3);cc.copy(ca).lerp(cb,r/2200);gc.set([cc.r,cc.g,cc.b],i*3)}
+ const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.BufferAttribute(gp,3));gg.setAttribute('color',new THREE.BufferAttribute(gc,3));
+ const gal=new THREE.Group(),gpts=new THREE.Points(gg,new THREE.PointsMaterial({size:20,vertexColors:true,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
+ gal.add(gpts);gal.add(spr(0xffddaa,700,.3));gal.position.set(4500,2200,-9000);gal.rotation.set(.9,0,.3);scene.add(gal);
+ anim.push((t,dt)=>gpts.rotation.y+=.02*dt);
+ addPoi('GALAXIE SPIRALE','Cent millions d\'étoiles qui tournent en silence.',gal.position,1800,0);
+
+ // Station orbitale
+ const st=new THREE.Group(),M=new THREE.MeshStandardMaterial({color:0x99a4b5,metalness:.8,roughness:.35}),wheel=new THREE.Group();
+ wheel.add(new THREE.Mesh(new THREE.TorusGeometry(110,9,12,48),M));
+ const lit=new THREE.Mesh(new THREE.TorusGeometry(110,2.5,6,64),new THREE.MeshBasicMaterial({color:0x00f2ff}));lit.position.z=10;wheel.add(lit);
+ for(let i=0;i<4;i++){const sk=new THREE.Mesh(new THREE.BoxGeometry(220,5,5),M);sk.rotation.z=i*Math.PI/4;wheel.add(sk)}
+ st.add(wheel);const hub=new THREE.Mesh(new THREE.CylinderGeometry(22,22,170,16).rotateX(Math.PI/2),M);st.add(hub);
+ const b1=spr(0xffffff,35),b2=spr(0x00f2ff,35);b1.position.z=90;b2.position.z=-90;st.add(b1,b2);
+ st.position.set(-1100,400,-2800);st.rotation.set(.4,.6,0);scene.add(st);
+ anim.push((t,dt)=>{wheel.rotation.z+=.25*dt;b1.material.opacity=Math.sin(t*4)>0?1:.1;b2.material.opacity=Math.sin(t*4+2)>0?1:.1});
+ addPoi('ARCHE ORBITALE','Station habitée. Des drones patrouillent autour.',st.position,130,150);
+ for(let i=0;i<2;i++){const d=new THREE.Group();d.add(new THREE.Mesh(new THREE.ConeGeometry(6,28,6).rotateX(Math.PI/2),new THREE.MeshStandardMaterial({color:0xdddddd,metalness:.7,roughness:.3})));
+  const e=spr(0x66ccff,30);e.position.z=-14;d.add(e);scene.add(d);
+  const rad=R(220,420),sp=R(.2,.5)*(i%2?1:-1),ph=R(0,TAU),ti=R(-.6,.6);
+  const pos=a=>new THREE.Vector3(Math.cos(a)*rad,Math.sin(a*2)*50+Math.sin(a)*rad*ti,Math.sin(a)*rad).add(st.position);
+  anim.push(t=>{const a=t*sp+ph;d.position.copy(pos(a));d.lookAt(pos(a+(sp>0?.05:-.05)))})}
+
+ // Champ d'astéroïdes
+ const N2=220;asteroids=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0x4a4a4e,roughness:1,flatShading:true}),N2);astD=[];
+ for(let i=0;i<N2;i++){const a=R(0,TAU),r=R(1400,2200);astD.push({p:[Math.cos(a)*r,R(-140,140)-200,Math.sin(a)*r-4800],s:R(6,45),k:[R(.5,1.4),R(.5,1.4)],r:[R(0,TAU),R(0,TAU),R(0,TAU)],v:R(-.5,.5)})}
+ scene.add(asteroids);addPoi('CEINTURE DE KUIPER-X','Des milliers de roches à frôler. Pilote prudemment.',[0,-200,-3000],150,0);
+ pois[pois.length-1].pos.set(0,-200,-3000);
+
+ // Forêt de cristaux
+ const cg=new THREE.Group(),cm=new THREE.InstancedMesh(new THREE.OctahedronGeometry(1),new THREE.MeshBasicMaterial({transparent:true,opacity:.3,blending:THREE.AdditiveBlending,depthWrite:false}),40),col=new THREE.Color();
+ for(let i=0;i<40;i++){const s=R(15,60),v=new THREE.Vector3(R(-1,1),R(-1,1),R(-1,1)).normalize().multiplyScalar(R(0,450));dummy.position.copy(v);dummy.rotation.set(R(0,TAU),R(0,TAU),R(0,TAU));dummy.scale.set(s*.5,s*2.2,s*.5);dummy.updateMatrix();cm.setMatrixAt(i,dummy.matrix);cm.setColorAt(i,col.setHSL(.52,.5,R(.35,.55)))}
+ cg.add(cm);cg.position.set(-1300,-250,-8200);scene.add(cg);anim.push((t,dt)=>cg.rotation.y+=.05*dt);
+ addPoi('CRISTAUX D\'ÉTHER','Cristaux vivants qui chantent à basse fréquence.',cg.position,450,0);
+
+ // Comètes
+ for(let i=0;i<2;i++){const c=new THREE.Group(),h=spr(0xddeeff,60);c.add(h);
+  const tl=new THREE.Mesh(new THREE.ConeGeometry(16,700,10,1,true).rotateX(-Math.PI/2).translate(0,0,-350),new THREE.MeshBasicMaterial({color:0xaaccff,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));c.add(tl);
+  c.position.set(R(-4000,4000),R(-1500,1500),R(500,-10000));c.userData.v=new THREE.Vector3(R(-1,1),R(-.3,.3),R(-1,1)).normalize().multiplyScalar(R(250,500));scene.add(c);comets.push(c)}
+
+ // Poussière locale (effet de vitesse)
+ dustP=new Float32Array(300*3);for(let i=0;i<dustP.length;i++)dustP[i]=R(-700,700);
+ const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(dustP,3));
+ dust=new THREE.Points(dg,new THREE.PointsMaterial({color:0xaee8ff,size:2.5,transparent:true,opacity:.3,fog:false,sizeAttenuation:false}));dust.frustumCulled=false;scene.add(dust);
+}
+
+/* ---------- Audio ambiant ---------- */
+function startAudio(){if(audio)return;try{
+ const A=new (window.AudioContext||window.webkitAudioContext)(),mg=A.createGain(),f=A.createBiquadFilter();mg.gain.value=0;mg.connect(A.destination);f.type='lowpass';f.frequency.value=400;f.connect(mg);
+ [55,82.4,110.3,164.9].forEach((fr,i)=>{const o=A.createOscillator(),g=A.createGain();o.type=i%2?'sine':'sawtooth';o.frequency.value=fr;o.detune.value=R(-8,8);g.gain.value=.15;o.connect(g);g.connect(f);o.start()});
+ const l=A.createOscillator(),lg=A.createGain();l.frequency.value=.07;lg.gain.value=250;l.connect(lg);lg.connect(f.frequency);l.start();
+ mg.gain.linearRampToValueAtTime(.35,A.currentTime+4);audio={A,mg,f,on:true}}catch(e){}}
+
+/* ---------- Boucle ---------- */
+let currentActive='';
+function showProjectUI(d){if(currentActive===d.title)return;currentActive=d.title;const el=$('project-display');el.classList.remove('active');
+ setTimeout(()=>{$('p-title').innerText=d.title;$('p-desc').innerText=d.desc;$('p-title').style.color='#'+d.color.toString(16).padStart(6,'0');el.classList.add('active')},400)}
+
+function warp(){if(warping)return;warping=true;const f=$('flash');
+ gsap.timeline().to(f,{opacity:1,duration:.4}).call(()=>{camera.position.set(3400,1500,-7200);vel.set(0,0,0);yaw=-.55;pitch=.3;toast('HORIZON FRANCHI','Tu ressors près de la galaxie spirale.')}).to(f,{opacity:0,duration:2}).call(()=>warping=false)}
+
+function drawRadar(){const c=$('radar'),g=c.getContext('2d'),cx=65,cy=65,sc=55/6000,cy2=Math.cos(yaw),sy=Math.sin(yaw);
+ g.clearRect(0,0,130,130);g.strokeStyle='rgba(0,242,255,.25)';g.beginPath();g.arc(cx,cy,27,0,TAU);g.moveTo(cx,5);g.lineTo(cx,125);g.moveTo(5,cy);g.lineTo(125,cy);g.stroke();
+ const dot=(p,col,s)=>{const vx=p.x-camera.position.x,vz=p.z-camera.position.z;let rx=(vx*cy2-vz*sy)*sc,fy=(-vx*sy-vz*cy2)*sc;const L=Math.hypot(rx,fy);if(L>58){rx*=58/L;fy*=58/L}
+  g.fillStyle=col;g.beginPath();g.arc(cx+rx,cy-fy,s,0,TAU);g.fill()};
+ pois.forEach(p=>dot(p.pos,p.found?'#00f2ff':'#ffffff',p.found?3:2));projects.forEach(p=>dot(p.mesh.position,'#'+p.data.color.toString(16).padStart(6,'0'),3.5));
+ g.fillStyle='#fff';g.beginPath();g.moveTo(cx,cy-6);g.lineTo(cx-4,cy+4);g.lineTo(cx+4,cy+4);g.fill()}
+
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime,boost=keys.ShiftLeft||keys.ShiftRight,acc=(boost?4200:1700)*dt;
+ // Déplacement
+ camera.getWorldDirection(tmpF);tmpR.crossVectors(tmpF,UP).normalize();
+ if(keys.KeyW)vel.addScaledVector(tmpF,acc);if(keys.KeyS)vel.addScaledVector(tmpF,-acc);
+ if(keys.KeyD)vel.addScaledVector(tmpR,acc);if(keys.KeyA)vel.addScaledVector(tmpR,-acc);
+ if(keys.Space)vel.addScaledVector(UP,acc);if(keys.KeyC||keys.ControlLeft)vel.addScaledVector(UP,-acc);
+ // Orientation
+ yaw+=((keys.ArrowLeft?1:0)-(keys.ArrowRight?1:0))*1.6*dt;pitch=Math.max(-1.5,Math.min(1.5,pitch+((keys.ArrowUp?1:0)-(keys.ArrowDown?1:0))*1.6*dt));
+ const k=1-Math.exp(-12*dt);camera.rotation.y+=(yaw-camera.rotation.y)*k;camera.rotation.x+=(pitch-camera.rotation.x)*k;
+ // Gravité du trou noir
+ tmpD.subVectors(bh.position,camera.position);const bd=tmpD.length();
+ if(bd<1800){vel.addScaledVector(tmpD.normalize(),Math.pow(1-bd/1800,2)*2400*dt);if(bd<95)warp()}
+ let sp=vel.length(),mx=boost?2600:1400;if(sp>mx)vel.multiplyScalar(mx/sp);vel.multiplyScalar(Math.exp(-1.3*dt));sp=vel.length();
+ camera.position.addScaledVector(vel,dt);
+ // Collisions douces
+ for(const b of bodies){tmpD.subVectors(camera.position,b.pos);const L=tmpD.length();if(L<b.r+25){camera.position.copy(b.pos).addScaledVector(tmpD.normalize(),b.r+25);vel.multiplyScalar(.3)}}
+ // Effet de vitesse
+ camera.fov+=((75+Math.min(40,sp/2600*40*1.4))-camera.fov)*k;camera.updateProjectionMatrix();
+ // Animations
+ stars.rotation.z+=.0005*dt*60;
+ anim.forEach(f=>f(t,dt));
+ rings.forEach((r,i)=>{r.material.opacity=.06+.04*Math.sin(t*2-i*.5)});
+ comets.forEach(c=>{c.position.addScaledVector(c.userData.v,dt);c.lookAt(c.position.clone().add(c.userData.v));
+  if(c.position.distanceTo(camera.position)>9000){c.position.copy(camera.position).add(new THREE.Vector3(R(-6000,6000),R(-2000,2000),R(-6000,6000)));}});
+ asteroids.visible=true;astD.forEach((a,i)=>{dummy.position.set(...a.p);dummy.rotation.set(a.r[0]+t*a.v,a.r[1]+t*a.v*.7,a.r[2]);dummy.scale.set(a.s*a.k[0],a.s,a.s*a.k[1]);dummy.updateMatrix();asteroids.setMatrixAt(i,dummy.matrix)});asteroids.instanceMatrix.needsUpdate=true;
+ for(let i=0;i<dustP.length;i+=3)for(let j=0;j<3;j++){const c=camera.position.getComponent(j);dustP[i+j]=((dustP[i+j]-c+700)%1400+1400)%1400-700+c}
+ dust.geometry.attributes.position.needsUpdate=true;
+ projects.forEach(p=>{p.mesh.rotation.y+=.01;p.mesh.rotation.x+=.005;if(camera.position.distanceTo(p.mesh.position)<800)showProjectUI(p.data)});
+ // Découvertes & HUD
+ let near=null,nd=1e9;
+ pois.forEach(p=>{const d=camera.position.distanceTo(p.pos);if(d<nd){nd=d;near=p}
+  if(!p.found&&d<p.r*3+500){p.found=true;found++;toast('DÉCOUVERTE · '+p.name,p.desc);$('disc').innerText=`DÉCOUVERTES : ${found} / ${pois.length}`;
+   if(found===pois.length)setTimeout(()=>toast('UNIVERS COMPLET','Tu as tout exploré, Commandant.'),1500)}});
+ $('near').innerText=`CIBLE : ${near.name} · ${Math.round(nd)} u`;
+ $('speedometer').innerText=`VELOCITY: ${(sp/100).toFixed(2)}`;
+ $('coords').innerText=`X ${Math.round(camera.position.x)} Y ${Math.round(camera.position.y)} Z ${Math.round(camera.position.z)}`;
+ drawRadar();
+ if(audio)audio.f.frequency.setTargetAtTime(300+sp*1.3,audio.A.currentTime,.2);
+ renderer.render(scene,camera);
+}
+init();
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from portfolio.models import (
     Profile, HeroStage, ProblemStatement, SkillGroup,
     Project, Certification, TrainingItem,
+    SiteText, NavItem, MarqueeItem, ManifestoStat, FocusItem, ContactItem,
 )
 
 
@@ -20,6 +21,12 @@ class Command(BaseCommand):
         self.seed_projects()
         self.seed_certifications()
         self.seed_training()
+        self.seed_site_text()
+        self.seed_nav()
+        self.seed_marquee()
+        self.seed_manifesto_stats()
+        self.seed_focus_items()
+        self.seed_contact_items()
         self.ensure_admin()
         self.stdout.write(self.style.SUCCESS("Contenu du portfolio chargé."))
 
@@ -56,6 +63,9 @@ class Command(BaseCommand):
         )
 
     def seed_hero_stages(self):
+        # Troisième partie : on ne garde que la PREMIÈRE MOITIÉ du mouvement des
+        # particules (identité puis dispersion). L'ampoule et le globe — la
+        # seconde moitié — sont volontairement retirés.
         stages = [
             dict(order=1, shape="brain",
                  eyebrow="Étudiant en génie logiciel",
@@ -68,19 +78,11 @@ class Command(BaseCommand):
                  body="Je pars souvent de zéro dans un domaine et je mène chaque projet "
                       "jusqu'au bout, avec curiosité et rigueur."),
             dict(order=3, shape="dissolve"),
-            dict(order=4, shape="lightbulb",
-                 title="Faire jaillir les idées.",
-                 body="Second Brain, Jarvis, la reconnaissance de gestes : autant "
-                      "d'expériences pour donner une intelligence locale et réactive à des "
-                      "objets du quotidien."),
-            dict(order=5, shape="globe",
-                 title="Un métier sans frontières.",
-                 body="Mobile, web, jeu vidéo, réseaux : je navigue entre les briques "
-                      "techniques pour donner vie à une idée, quel que soit le terrain.",
-                 cta_label="Me contacter", cta_href="mailto:nickkakaye4@gmail.com"),
         ]
         for s in stages:
             HeroStage.objects.update_or_create(order=s["order"], defaults=s)
+        # Supprime les anciennes étapes (ampoule, globe…) si elles existent encore.
+        HeroStage.objects.exclude(order__in=[s["order"] for s in stages]).delete()
 
     def seed_problem_statements(self):
         lines = [
@@ -177,6 +179,118 @@ class Command(BaseCommand):
         ]
         for i, (title, desc) in enumerate(items, start=1):
             TrainingItem.objects.update_or_create(order=i, defaults={"title": title, "description": desc})
+
+    def seed_site_text(self):
+        # (clé, libellé, valeur, groupe) — le groupe sert à ranger l'admin.
+        texts = [
+            # Accueil (UI A)
+            ("brand", "Nom affiché en haut à gauche", "Nick Kakaye", "accueil"),
+            ("header_cta", "Bouton de l'en-tête", "Me contacter", "accueil"),
+            ("home_greet", "Formule d'accueil (haut de page)", "Bonjour, je suis", "accueil"),
+            ("home_title_enter", "Bouton « entrer dans l'univers »", "Entrer dans mon univers", "accueil"),
+            ("home_cta1", "Bouton 1 de l'accueil", "Voir mes projets", "accueil"),
+            ("home_cta2", "Bouton 2 de l'accueil", "Me contacter", "accueil"),
+            ("home_avail", "Titre de la carte « disponible »", "Disponible pour un stage", "accueil"),
+            ("scroll_cue", "Indication « défiler »", "Défiler", "accueil"),
+            # Univers 3D (UI B)
+            ("space_title", "Titre de la section 3D", "Applications intelligentes", "univers"),
+            ("space_text", "Texte de la section 3D",
+             "IA embarquée, mobile et vision par ordinateur — des projets pensés de bout en bout, souvent sans connexion.",
+             "univers"),
+            ("space_cta", "Bouton de la section 3D", "Découvrir mes projets", "univers"),
+            ("space_loader", "Libellé de chargement de la 3D", "Chargement de l'expérience…", "univers"),
+            ("hs_back_home", "Bouton « retour accueil » de l'univers", "Accueil", "univers"),
+            ("hs_quest_title", "Titre de la quête (balise)", "TROU NOIR", "univers"),
+            ("hs_transmission", "Badge de la transmission planétaire", "TRANSMISSION STELLAIRE", "univers"),
+            ("hs_planet_default", "Nom de planète (avant découverte)", "PLANÈTE", "univers"),
+            ("hs_target_label", "Étiquette de la cible (HUD)", "CIBLE", "univers"),
+            ("hs_speed_label", "Étiquette de la vitesse (HUD)", "VITESSE", "univers"),
+            ("hs_radar_legend", "Légende du radar", "RADAR STELLAIRE", "univers"),
+            ("hs_cmds_pc_tag", "Titre du bloc commandes PC", "[COMMANDES PC]", "univers"),
+            ("hs_cmds_touch_tag", "Titre du bloc commandes tactiles", "[COMMANDES TACTILES]", "univers"),
+            # Atelier (UI C)
+            ("lilo_intro_tag", "Sur-titre du manifeste", "01 / L'atelier", "atelier"),
+            ("lilo_intro_h1", "Titre du manifeste (1re ligne)", "Je fabrique", "atelier"),
+            ("lilo_intro_h2", "Titre du manifeste (2e ligne, contour)", "pour comprendre", "atelier"),
+            ("metier_tag", "Sur-titre de « Ce qui m'anime »", "02 / Ce qui m'anime", "atelier"),
+            ("skills_tag", "Sur-titre Compétences", "03 / Boîte à outils", "atelier"),
+            ("skills_title", "Titre Compétences", "Compétences", "atelier"),
+            ("training_tag", "Sur-titre Formation", "04 / Diplôme en cours", "atelier"),
+            ("projects_tag", "Sur-titre Projets", "05 / Travaux récents", "atelier"),
+            ("projects_title", "Titre Projets", "Projets réalisés", "atelier"),
+            ("projects_lead", "Introduction Projets",
+             "Construits de bout en bout, souvent en partant de zéro dans le domaine.", "atelier"),
+            ("certs_tag", "Sur-titre Certifications", "06 / Reconnaissances", "atelier"),
+            ("certs_title", "Titre Certifications", "Certifications", "atelier"),
+            ("certs_lead", "Introduction Certifications",
+             "Cinq certificats obtenus en 2026. Cliquez pour voir le document.", "atelier"),
+            ("contact_tag", "Sur-titre Contact", "07 / Contact", "atelier"),
+            ("contact_copy", "Bouton « copier l'adresse »", "Copier l'adresse", "atelier"),
+            ("contact_up", "Lien « retour en haut »", "Retour en haut", "atelier"),
+            ("atelier_home", "Bouton « revenir à l'accueil » de l'atelier", "Revenir à l'accueil", "atelier"),
+            ("atelier_universe", "Bouton « retourner dans l'univers »", "Retourner dans mon univers", "atelier"),
+            ("colophon", "Mention finale", "Conçu et développé par Nick Kakaye · Abidjan", "pied"),
+            # Navigation & pied de page
+            ("nav_projects", "Menu : Projets", "Projets", "navigation"),
+            ("nav_skills", "Menu : Compétences", "Compétences", "navigation"),
+            ("nav_training", "Menu : Formation", "Formation", "navigation"),
+            ("nav_certs", "Menu : Certifications", "Certifications", "navigation"),
+            ("nav_contact", "Menu : Contact", "Contact", "navigation"),
+            ("footer_line", "Ligne du pied de page", "© 2026 Nick Kakaye. Conçu et développé.", "pied"),
+        ]
+        for key, label, value, group in texts:
+            SiteText.objects.update_or_create(
+                key=key, defaults={"label": label, "value": value, "group": group},
+            )
+
+    def seed_nav(self):
+        links = [
+            (1, "Accueil", "#home", False, True),
+            (2, "Projets", "#projects", True, True),
+            (3, "Compétences", "#skills", True, True),
+            (4, "Formation", "#training", False, True),
+            (5, "Certifications", "#certs", True, True),
+            (6, "Contact", "#cta", False, True),
+        ]
+        for order, label, anchor, in_nav, in_drawer in links:
+            NavItem.objects.update_or_create(
+                order=order,
+                defaults=dict(label=label, anchor=anchor, show_in_nav=in_nav, show_in_drawer=in_drawer),
+            )
+
+    def seed_marquee(self):
+        words = ["IA locale & cloud", "Mobile", "Vision par ordinateur", "Réseaux", "Web", "Jeux"]
+        for i, text in enumerate(words, start=1):
+            MarqueeItem.objects.update_or_create(order=i, defaults={"text": text})
+
+    def seed_manifesto_stats(self):
+        stats = [(6, "Projets menés"), (5, "Certifications"), (10, "Technologies"), (3, "Années d'atelier")]
+        for i, (value, label) in enumerate(stats, start=1):
+            ManifestoStat.objects.update_or_create(order=i, defaults={"value": value, "label": label})
+
+    def seed_focus_items(self):
+        items = [
+            ("Faire jaillir les idées.",
+             "Second Brain, Jarvis, la reconnaissance de gestes : autant d'expériences pour "
+             "donner une intelligence locale et réactive à des objets du quotidien."),
+            ("Un métier sans frontières.",
+             "Mobile, web, jeu vidéo, réseaux : je navigue entre les briques techniques pour "
+             "donner vie à une idée, quel que soit le terrain."),
+        ]
+        for i, (title, body) in enumerate(items, start=1):
+            FocusItem.objects.update_or_create(order=i, defaults={"title": title, "body": body})
+
+    def seed_contact_items(self):
+        items = [
+            ("École", "ESATIC — École Supérieure Africaine des TIC\nLicence 3 SIGL · Année 2026-2027", False),
+            ("Où", "Abidjan, Côte d'Ivoire", False),
+            ("Écrire", "nickkakaye4@gmail.com", True),
+            ("Remonter", "#home", False),
+        ]
+        for i, (label, value, copyable) in enumerate(items, start=1):
+            ContactItem.objects.update_or_create(
+                order=i, defaults={"label": label, "value": value, "copyable": copyable},
+            )
 
     def ensure_admin(self):
         """Crée (ou réinitialise) le compte administrateur à partir de variables

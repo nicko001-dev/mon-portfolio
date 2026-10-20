@@ -18,17 +18,18 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307070c'/%3E%3Cpath d='M32 14 46 38 32 50 18 38Z' fill='none' stroke='%238b5cf6' stroke-width='2.5'/%3E%3C/svg%3E"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="{% static 'portfolio/css/style.css' %}" />
     {% block extra_head %}{% endblock %}
   </head>
   <body>
     <div class="starfield" aria-hidden="true"></div>
     <canvas id="stars-canvas" aria-hidden="true"></canvas>
-    <div class="drift-layer" aria-hidden="true">
-      {% for t in "0123456789abcdef" %}
-      <span class="drift drift-{{ forloop.counter0 }}"></span>
-      {% endfor %}
-    </div>
 
     <header id="site-header">
       <div class="container">
@@ -42,12 +43,16 @@
             />
             <path d="M16 12 21 16 16 20 11 16Z" fill="#8b5cf6" />
           </svg>
-          Nick Kakaye
+          {{ txt.brand|default:profile.name }}
         </a>
         <nav class="nav-links" aria-label="Navigation principale">
-          <a href="#projects">Projets</a>
-          <a href="#skills">Compétences</a>
-          <a href="#certs">Certifications</a>
+          {% for item in nav_header %}
+          <a href="{{ item.anchor }}">{{ item.label }}</a>
+          {% empty %}
+          <a href="#projects">{{ txt.nav_projects|default:"Projets" }}</a>
+          <a href="#skills">{{ txt.nav_skills|default:"Compétences" }}</a>
+          <a href="#certs">{{ txt.nav_certs|default:"Certifications" }}</a>
+          {% endfor %}
         </nav>
         <div class="hdr-actions">
           <button
@@ -64,7 +69,7 @@
               decoding="async"
             />
           </button>
-          <a class="btn" href="mailto:{{ profile.email }}">Me contacter</a>
+          <a class="btn" href="mailto:{{ profile.email }}">{{ txt.header_cta|default:"Me contacter" }}</a>
           <button
             class="hamb"
             id="hambbtn"
@@ -100,12 +105,16 @@
             <path d="M6 6l12 12M18 6 6 18" />
           </svg>
         </button>
+        {% for item in nav_drawer %}
+        <a href="{{ item.anchor }}">{{ item.label }}</a>
+        {% empty %}
         <a href="#home">Accueil</a>
-        <a href="#projects">Projets</a>
-        <a href="#skills">Compétences</a>
-        <a href="#training">Formation</a>
-        <a href="#certs">Certifications</a>
-        <a href="#cta">Contact</a>
+        <a href="#projects">{{ txt.nav_projects|default:"Projets" }}</a>
+        <a href="#skills">{{ txt.nav_skills|default:"Compétences" }}</a>
+        <a href="#training">{{ txt.nav_training|default:"Formation" }}</a>
+        <a href="#certs">{{ txt.nav_certs|default:"Certifications" }}</a>
+        <a href="#cta">{{ txt.nav_contact|default:"Contact" }}</a>
+        {% endfor %}
       </nav>
     </div>
 
@@ -113,7 +122,7 @@
 
     <footer>
       <div class="container">
-        <p>© 2026 {{ profile.name }}. Conçu et développé.</p>
+        <p>{{ txt.footer_line|default:"© 2026 Nick Kakaye. Conçu et développé." }}</p>
         <a href="mailto:{{ profile.email }}">{{ profile.email }}</a>
       </div>
     </footer>
