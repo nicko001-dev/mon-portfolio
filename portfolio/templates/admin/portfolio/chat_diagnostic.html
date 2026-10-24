@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Accueil</a> &rsaquo;
+  <a href="{% url 'admin:portfolio_chatbotsettings_changelist' %}">Assistant IA · réglages et instructions</a> &rsaquo;
+  Test de connexion
+</div>
+{% endblock %}
+{% block content %}
+<div id="content-main">
+  <p>Ce test vérifie les fournisseurs configurés, leurs modèles gratuits, puis envoie une vraie requête.</p>
+  <table>
+    <thead><tr><th>Étape</th><th>Résultat</th><th>Détail</th></tr></thead>
+    <tbody>
+    {% for s in steps %}
+      <tr>
+        <td>{{ s.label }}</td>
+        <td>{% if s.ok %}<b style="color:#2e7d32">✔ OK</b>{% else %}<b style="color:#c62828">✘ Échec</b>{% endif %}</td>
+        <td>{{ s.detail }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p style="margin-top:18px"><a class="button" href="">Relancer le test</a></p>
+</div>
+{% endblock %}

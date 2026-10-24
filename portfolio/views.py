@@ -1,157 +1,67 @@
-from django.shortcuts import render
+import json
+import logging
 
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.http import require_POST
+
+from . import chatbot
 from .models import (
-    Profile, HeroStage, ProblemStatement, SkillGroup,
-    Project, Certification, TrainingItem,
+    Profile, SkillGroup, Project, Certification, TrainingItem,
     SiteText, NavItem, MarqueeItem, ManifestoStat, FocusItem, ContactItem,
+    ChatbotSettings, ChatLog, UniverseBody,
 )
 
+log = logging.getLogger(__name__)
 
-def build_hyperspace(profile, txt):
-    """Contenu injecté dans l'univers 3D (acte II — base « lilo »).
 
-    Le JSON est émis tel quel par le template puis lu par hyperspace.js :
-    chaque information devient un corps, une balise ou une transmission
-    que l'on découvre en volant, plutôt qu'un bloc de texte en HTML.
+def build_hyperspace(txt):
+    """Données injectées dans l'univers 3D (lues par hyperspace.js).
+
+    - ``projects`` : une planète par projet (titre, sous-titre, description, pile).
+    - ``ui`` : tous les textes affichés par le JavaScript (messages, libellés du HUD),
+      modifiables dans l'admin → « Univers 3D · textes, commandes et messages ».
     """
-    p = profile or Profile()
-    stats = [
-        {"value": s.value, "label": s.label}
-        for s in ManifestoStat.objects.all()
-    ]
-    if not stats:
-        stats = [
-            {"value": p.stat_projects, "label": "Projets menés"},
-            {"value": p.stat_certifications, "label": "Certifications"},
-            {"value": p.stat_technologies, "label": "Technologies"},
-            {"value": p.stat_years, "label": "Années d'atelier"},
-        ]
+    def t(key, default):
+        return txt.get(key, default)
+
     return {
-        "identity": {
-            "name": p.name,
-            "role": p.role,
-            "school": p.school,
-            "program": p.program,
-            "year": p.program_year,
-            "location": p.location,
-        },
-        "mission": {
-            "title": txt.get("space_title", "Applications intelligentes"),
-            "text": txt.get(
-                "space_text",
-                "IA embarquée, mobile et vision par ordinateur — des projets "
-                "pensés de bout en bout, souvent sans connexion.",
-            ),
-            "cta": txt.get("space_cta", "Découvrir mes projets"),
-        },
-        "stages": [
-            {"title": s.title, "body": s.body}
-            for s in HeroStage.objects.exclude(title="")
-        ],
-        "statements": [s.text for s in ProblemStatement.objects.all()],
         "projects": [
             {
                 "mono": pj.monogram,
                 "title": pj.title,
                 "tag": pj.tag,
                 "kind": pj.kind,
+                "desc": pj.description,
                 "stack": pj.stack,
             }
             for pj in Project.objects.all()
         ],
-        "skills": [
-            {"name": g.name, "description": g.description}
-            for g in SkillGroup.objects.all()
-        ],
-        "certs": [
-            {"title": c.title, "org": c.org, "date": c.date}
-            for c in Certification.objects.all()
-        ],
-        "training": [
-            {"title": t.title, "description": t.description}
-            for t in TrainingItem.objects.all()
-        ],
-        "stats": stats,
-        # Les planètes de l'univers portent les informations réelles :
-        # une ligne courte par corps, dans l'ordre du fichier de base.
+        # Textes des astres (nom, sous-titre, transmission) — lus par hyperspace.js
         "bodies": [
-            f"{p.role} · {p.school}",
-            f"{p.program} · {p.program_year}",
-            f"{p.location}",
-            "IA locale, mobile et vision par ordinateur",
-            txt.get("space_title", "Applications intelligentes"),
+            {"key": b.key, "name": b.name, "sub": b.subtitle, "info": b.info}
+            for b in UniverseBody.objects.all()
         ],
-        # Les sites de l'univers (astéroïdes, cristaux, arche, galaxie…)
-        # portent les compétences, la formation, les certifications et les
-        # chiffres du parcours. Le fichier de base ne garde que les
-        # emplacements — le contenu vient de la base de données.
-        "discoveries": _discoveries(txt, stats),
+        "ui": {
+            "discovery": t("hs_toast_discovery", "DÉCOUVERTE"),
+            "warpTitle": t("hs_toast_warp_title", "HORIZON FRANCHI"),
+            "warpText": t("hs_toast_warp_text", "Entrée dans l\'Atelier..."),
+            "welcomeTitle": t("hs_toast_welcome_title", "BIENVENUE DANS L\'UNIVERS"),
+            "welcomeText": t("hs_toast_welcome_text", "Quête : Trouve le trou noir pour accéder à l\'Atelier !"),
+            "returnTitle": t("hs_toast_return_title", "RETOUR DANS L\'UNIVERS"),
+            "returnText": t("hs_toast_return_text", "Cap maintenu vers les étoiles."),
+            "target": t("hs_target_label", "CIBLE"),
+            "speed": t("hs_speed_label", "VITESSE"),
+        },
     }
 
 
-def _discoveries(txt, stats):
-    """Les découvertes de l'univers : mêmes sites que le fichier de base,
-    contenu tiré du portfolio (compétences, formation, certifications)."""
-    out = []
-
-    # Ceinture d'astéroïdes → ce qui m'anime
-    out.append({
-        "name": "CEINTURE KUIPER-X",
-        "pos": [0, -200, -3000],
-        "r": 450,
-        "color": "#eab54d",
-        "lines": [f.title + " " + f.body for f in FocusItem.objects.all()][:2] or
-                 ["Des milliers de roches à frôler — le terrain où j'apprends."],
-    })
-
-    # Arche orbitale → boîte à outils (compétences)
-    out.append({
-        "name": "ARCHE ORBITALE",
-        "pos": [-1100, 400, -2800],
-        "r": 420,
-        "color": "#00f2ff",
-        "lines": [f"{g.name} — {g.description}" for g in SkillGroup.objects.all()][:3],
-    })
-
-    # Cristaux d'éther → diplôme en cours (formation)
-    out.append({
-        "name": "CRISTAUX D'ÉTHER",
-        "pos": [-1300, -250, -8200],
-        "r": 460,
-        "color": "#7de8ff",
-        "lines": [f"{t.title} — {t.description}" for t in TrainingItem.objects.all()][:3],
-    })
-
-    # Galaxie spirale → certifications
-    out.append({
-        "name": "GALAXIE SPIRALE",
-        "pos": [4500, 2200, -9000],
-        "r": 1800,
-        "color": "#f472b6",
-        "lines": [f"{c.title} — {c.org} ({c.date})" for c in Certification.objects.all()][:4],
-    })
-
-    # Soleil → le manifeste, en une ligne
-    out.append({
-        "name": "SOLEIL ALPHA",
-        "pos": [-4200, 1500, -1500],
-        "r": 420,
-        "color": "#eab54d",
-        "lines": [
-            txt.get("lilo_intro_h1", "Je fabrique") + " " + txt.get("lilo_intro_h2", "pour comprendre"),
-            " · ".join(f"{s['value']} {s['label'].lower()}" for s in stats),
-        ],
-    })
-    return out
-
-
 def index(request):
-    profile = Profile.get()
+    profile = Profile.get() or Profile()
     txt = SiteText.as_dict()
+    bot = ChatbotSettings.get()
     context = {
         "profile": profile,
-        "hero_stages": HeroStage.objects.all(),
-        "problem_statements": ProblemStatement.objects.all(),
         "skill_groups": SkillGroup.objects.all(),
         "projects": Project.objects.all(),
         "certifications": Certification.objects.all(),
@@ -165,7 +75,86 @@ def index(request):
         "manifesto_stats": ManifestoStat.objects.all(),
         "focus_items": FocusItem.objects.all(),
         "contact_items": ContactItem.objects.all(),
-        # Univers hyperspace (acte II)
-        "hyperspace": build_hyperspace(profile, txt),
+        # Univers 3D
+        "hyperspace": build_hyperspace(txt),
+        # Assistant IA (configuration publique du widget — jamais la clé API)
+        "chatbot": {
+            "enabled": bot.enabled,
+            "name": bot.assistant_name,
+            "subtitle": bot.header_subtitle,
+            "welcome": bot.welcome_message,
+            "placeholder": bot.placeholder,
+            "suggestions": bot.suggestion_list(),
+            "universeSuggestions": bot.universe_suggestion_list(),
+            "alertText": bot.universe_alert_text,
+            "maxChars": bot.max_message_chars,
+            "url": "/api/chat/",
+        },
     }
     return render(request, "portfolio/index.html", context)
+
+
+# ── Assistant IA ────────────────────────────────────────────────────────
+ERROR_TEXT = {
+    "visitor": "Vous avez posé beaucoup de questions en peu de temps. Réessayez dans un moment.",
+    "global": "L'assistant a atteint sa limite d\'utilisation pour aujourd\'hui. Réessayez demain.",
+    "quota": "Les modèles gratuits sont temporairement limités ou saturés. Réessayez dans une minute.",
+}
+
+
+def _fail(request, visitor, cfg, status, user_msg, question="", error="", model=""):
+    ChatLog.objects.create(
+        visitor=visitor,
+        question=question if cfg.log_conversations else "",
+        ok=False, error=error[:200], model_used=model,
+    )
+    payload = {"error": user_msg}
+    # Le détail technique n'est montré qu'à un administrateur connecté (jamais aux visiteurs) :
+    # pratique pour comprendre un échec sans aller chercher dans les journaux du serveur.
+    user = getattr(request, "user", None)
+    if user is not None and user.is_authenticated and user.is_staff:
+        payload["debug"] = error[:300]
+    return JsonResponse(payload, status=status)
+
+
+@require_POST
+def chat_api(request):
+    cfg = ChatbotSettings.get()
+    if not cfg.enabled:
+        return JsonResponse({"error": cfg.unavailable_message}, status=503)
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"error": "Requête invalide."}, status=400)
+
+    message = str(data.get("message", "")).strip()
+    if not message:
+        return JsonResponse({"error": "Le message est vide."}, status=400)
+    if len(message) > cfg.max_message_chars:
+        return JsonResponse(
+            {"error": f"Message trop long ({cfg.max_message_chars} caractères maximum)."}, status=400)
+
+    visitor = chatbot.visitor_id(request)
+    limit = chatbot.check_limits(cfg, visitor)
+    if limit:
+        return JsonResponse({"error": ERROR_TEXT[limit]}, status=429)
+
+    history = chatbot.clean_history(data.get("history"), cfg)
+    screen = data.get("screen") if data.get("screen") in chatbot.SCREEN_LABELS else None
+    try:
+        reply, model = chatbot.ask_assistant(
+            cfg, chatbot.build_system_prompt(cfg, screen=screen), history, message)
+    except chatbot.AIProviderError as e:
+        log.error("Les fournisseurs IA ont échoué (%s) : %s", e.kind, e.detail)
+        user_msg = ERROR_TEXT["quota"] if e.kind == "quota" else cfg.unavailable_message
+        status = 429 if e.kind == "quota" else 503
+        return _fail(request, visitor, cfg, status, user_msg, message, f"{e.kind}: {e.detail}")
+
+    ChatLog.objects.create(
+        visitor=visitor,
+        question=message if cfg.log_conversations else "",
+        answer=reply if cfg.log_conversations else "",
+        ok=True, model_used=model,
+    )
+    return JsonResponse({"reply": reply})

@@ -1,22 +1,54 @@
 import os
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from portfolio.models import (
     Profile, HeroStage, ProblemStatement, SkillGroup,
     Project, Certification, TrainingItem,
     SiteText, NavItem, MarqueeItem, ManifestoStat, FocusItem, ContactItem,
+    UniverseBody,
 )
 
 
+OBSOLETE_TEXT_KEYS = [
+    "home_cta1", "scroll_cue", "space_title", "space_text", "space_cta", "space_loader",
+]
+
+
+class _Upsert:
+    """Comme ``Model.objects`` mais sans écraser l'existant (sauf avec --reset)."""
+
+    def __init__(self, model, reset):
+        self.model, self.reset = model, reset
+
+    def update_or_create(self, defaults=None, **lookup):
+        mgr = self.model.objects
+        fn = mgr.update_or_create if self.reset else mgr.get_or_create
+        return fn(defaults=defaults, **lookup)
+
+
 class Command(BaseCommand):
-    help = "Remplit (ou met à jour) la base avec le contenu réel du portfolio de Nick."
+    help = (
+        "Remplit la base avec le contenu du portfolio de Nick. Par défaut, ne crée que "
+        "ce qui manque (tes modifications faites dans l'admin sont conservées). "
+        "Avec --reset, réécrit tout avec les valeurs du code."
+    )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reset", action="store_true",
+            help="ÉCRASE le contenu existant avec les valeurs du code (efface les modifications d'admin).",
+        )
+
+    def upsert(self, model):
+        return _Upsert(model, self.reset)
 
     def handle(self, *args, **options):
+        self.reset = options["reset"]
         self.seed_profile()
-        self.seed_hero_stages()
-        self.seed_problem_statements()
+        self.seed_universe_bodies()
         self.seed_skill_groups()
         self.seed_projects()
         self.seed_certifications()
@@ -28,10 +60,12 @@ class Command(BaseCommand):
         self.seed_focus_items()
         self.seed_contact_items()
         self.ensure_admin()
-        self.stdout.write(self.style.SUCCESS("Contenu du portfolio chargé."))
+        call_command("seed_chatbot", stdout=self.stdout)
+        mode = "réinitialisé (--reset)" if self.reset else "complété (rien d'existant n'a été écrasé)"
+        self.stdout.write(self.style.SUCCESS(f"Contenu du portfolio {mode}."))
 
     def seed_profile(self):
-        Profile.objects.update_or_create(
+        self.upsert(Profile).update_or_create(
             pk=1,
             defaults=dict(
                 name="Nick Kakaye",
@@ -80,7 +114,7 @@ class Command(BaseCommand):
             dict(order=3, shape="dissolve"),
         ]
         for s in stages:
-            HeroStage.objects.update_or_create(order=s["order"], defaults=s)
+            self.upsert(HeroStage).update_or_create(order=s["order"], defaults=s)
         # Supprime les anciennes étapes (ampoule, globe…) si elles existent encore.
         HeroStage.objects.exclude(order__in=[s["order"] for s in stages]).delete()
 
@@ -94,7 +128,36 @@ class Command(BaseCommand):
             "C'est cette voie que j'explore, projet après projet.",
         ]
         for i, text in enumerate(lines, start=1):
-            ProblemStatement.objects.update_or_create(order=i, defaults={"text": text})
+            self.upsert(ProblemStatement).update_or_create(order=i, defaults={"text": text})
+
+    def seed_universe_bodies(self):
+        """Textes des astres de l'univers 3D (soleil, planètes, trou noir, lieux)."""
+        bodies = [
+            ("sun", "SOLEIL ALPHA", "NICK KAKAYE · INGÉNIERIE & IA",
+             "Étudiant en Système Informatique & Génie Logiciel à l'ESATIC (Abidjan). "
+             "Concepteur de solutions IA et logicielles."),
+            ("saturnia", "SATURNIA", "FORMATION ESATIC",
+             "3e année Licence Système Informatique & Génie Logiciel — ESATIC, Abidjan (2026)."),
+            ("verdania", "VERDANIA", "CE QUI M'ANIME",
+             "Second Brain, Jarvis, IA locale et vision par ordinateur : donner de "
+             "l'intelligence aux objets du quotidien."),
+            ("jovis9", "JOVIS-9", "COMPÉTENCES CLÉS",
+             "Python (Django, PyTorch), Mobile (Flutter), Systèmes C/C++, Docker, PostgreSQL, WebSockets."),
+            ("ignis", "IGNIS", "CERTIFICATIONS",
+             "5 Certifications Cisco obtenues en 2026 (CCNA, CyberOps, Python, Data Science, IoT)."),
+            ("cryos", "CRYOS", "CONTACT & STAGE",
+             "Disponible pour un stage de fin de cycle. Basé à Abidjan — ouvert au télétravail international."),
+            ("blackhole", "SINGULARITÉ", "PORTE VERS L'ATELIER", ""),
+            ("station", "ARCHE ORBITALE", "ATELIER & EXPERTISE", ""),
+            ("galaxy", "GALAXIE SPIRALE", "", ""),
+            ("kuiper", "CEINTURE KUIPER-X", "", ""),
+            ("crystals", "CRISTAUX D'ÉTHER", "", ""),
+        ]
+        for i, (key, name, subtitle, info) in enumerate(bodies, start=1):
+            self.upsert(UniverseBody).update_or_create(
+                key=key,
+                defaults={"order": i, "name": name, "subtitle": subtitle, "info": info},
+            )
 
     def seed_skill_groups(self):
         groups = [
@@ -106,7 +169,7 @@ class Command(BaseCommand):
             ("Objets connectés", "Arduino"),
         ]
         for i, (name, desc) in enumerate(groups, start=1):
-            SkillGroup.objects.update_or_create(order=i, defaults={"name": name, "description": desc})
+            self.upsert(SkillGroup).update_or_create(order=i, defaults={"name": name, "description": desc})
 
     def seed_projects(self):
         projects = [
@@ -150,7 +213,7 @@ class Command(BaseCommand):
                  stack="whatsapp-web.js · LM Studio · Java Swing"),
         ]
         for p in projects:
-            Project.objects.update_or_create(order=p["order"], defaults=p)
+            self.upsert(Project).update_or_create(order=p["order"], defaults=p)
 
     def seed_certifications(self):
         certs = [
@@ -166,7 +229,7 @@ class Command(BaseCommand):
                  org="ESATIC", date="18 août 2026"),
         ]
         for c in certs:
-            Certification.objects.update_or_create(order=c["order"], defaults=c)
+            self.upsert(Certification).update_or_create(order=c["order"], defaults=c)
 
     def seed_training(self):
         items = [
@@ -178,27 +241,26 @@ class Command(BaseCommand):
             ("Développement web", "Django, React, PostgreSQL, Git et GitHub en travaux pratiques."),
         ]
         for i, (title, desc) in enumerate(items, start=1):
-            TrainingItem.objects.update_or_create(order=i, defaults={"title": title, "description": desc})
+            self.upsert(TrainingItem).update_or_create(order=i, defaults={"title": title, "description": desc})
 
     def seed_site_text(self):
         # (clé, libellé, valeur, groupe) — le groupe sert à ranger l'admin.
         texts = [
+            # Général (tout le site)
+            ("seo_title", "Titre de l'onglet du navigateur", "Nick Kakaye — Portfolio", "general"),
+            ("seo_description", "Description pour Google et les aperçus de liens",
+             "Nick Kakaye — étudiant Système Informatique et Génie Logiciel à l'ESATIC (Abidjan). "
+             "IA locale, développement mobile et logiciels construits de bout en bout.", "general"),
+            ("home_video_url", "Adresse (URL) de la vidéo de l'accueil",
+             "https://strvid.nyc3.cdn.digitaloceanspaces.com/cloudinary/portfolio_hero_bg_zuhahj.webm", "general"),
             # Accueil (UI A)
             ("brand", "Nom affiché en haut à gauche", "Nick Kakaye", "accueil"),
             ("header_cta", "Bouton de l'en-tête", "Me contacter", "accueil"),
             ("home_greet", "Formule d'accueil (haut de page)", "Bonjour, je suis", "accueil"),
             ("home_title_enter", "Bouton « entrer dans l'univers »", "Entrer dans mon univers", "accueil"),
-            ("home_cta1", "Bouton 1 de l'accueil", "Voir mes projets", "accueil"),
             ("home_cta2", "Bouton 2 de l'accueil", "Me contacter", "accueil"),
             ("home_avail", "Titre de la carte « disponible »", "Disponible pour un stage", "accueil"),
-            ("scroll_cue", "Indication « défiler »", "Défiler", "accueil"),
             # Univers 3D (UI B)
-            ("space_title", "Titre de la section 3D", "Applications intelligentes", "univers"),
-            ("space_text", "Texte de la section 3D",
-             "IA embarquée, mobile et vision par ordinateur — des projets pensés de bout en bout, souvent sans connexion.",
-             "univers"),
-            ("space_cta", "Bouton de la section 3D", "Découvrir mes projets", "univers"),
-            ("space_loader", "Libellé de chargement de la 3D", "Chargement de l'expérience…", "univers"),
             ("hs_back_home", "Bouton « retour accueil » de l'univers", "Accueil", "univers"),
             ("hs_quest_title", "Titre de la quête (balise)", "TROU NOIR", "univers"),
             ("hs_transmission", "Badge de la transmission planétaire", "TRANSMISSION STELLAIRE", "univers"),
@@ -208,6 +270,20 @@ class Command(BaseCommand):
             ("hs_radar_legend", "Légende du radar", "RADAR STELLAIRE", "univers"),
             ("hs_cmds_pc_tag", "Titre du bloc commandes PC", "[COMMANDES PC]", "univers"),
             ("hs_cmds_touch_tag", "Titre du bloc commandes tactiles", "[COMMANDES TACTILES]", "univers"),
+            ("hs_cmds_pc_body", "Commandes PC — texte (les [MOTS] sont mis en gras)",
+             "[MOLETTE] Propulsion · [ZQSD / WASD] Translation\n[CLIC + GLISSER] Vue 360° · "
+             "[ESPACE / C] Monter / Descendre\n[MAJ] Turbo · [M] Son", "univers"),
+            ("hs_cmds_touch_body", "Commandes tactiles — texte (les [MOTS] sont mis en gras)",
+             "[JOYSTICK] Déplacement · [GLISSER] Regarder autour à 360°\n[▲ / ▼] Hauteur", "univers"),
+            ("hs_planet_desc_default", "Description de planète (avant découverte)", "Détails", "univers"),
+            ("hs_toast_welcome_title", "Message d'arrivée — titre", "BIENVENUE DANS L'UNIVERS", "univers"),
+            ("hs_toast_welcome_text", "Message d'arrivée — texte",
+             "Quête : Trouve le trou noir pour accéder à l'Atelier !", "univers"),
+            ("hs_toast_discovery", "Message « découverte » d'un corps céleste", "DÉCOUVERTE", "univers"),
+            ("hs_toast_warp_title", "Message du trou noir — titre", "HORIZON FRANCHI", "univers"),
+            ("hs_toast_warp_text", "Message du trou noir — texte", "Entrée dans l'Atelier...", "univers"),
+            ("hs_toast_return_title", "Message de retour dans l'univers — titre", "RETOUR DANS L'UNIVERS", "univers"),
+            ("hs_toast_return_text", "Message de retour dans l'univers — texte", "Cap maintenu vers les étoiles.", "univers"),
             # Atelier (UI C)
             ("lilo_intro_tag", "Sur-titre du manifeste", "01 / L'atelier", "atelier"),
             ("lilo_intro_h1", "Titre du manifeste (1re ligne)", "Je fabrique", "atelier"),
@@ -229,6 +305,9 @@ class Command(BaseCommand):
             ("contact_up", "Lien « retour en haut »", "Retour en haut", "atelier"),
             ("atelier_home", "Bouton « revenir à l'accueil » de l'atelier", "Revenir à l'accueil", "atelier"),
             ("atelier_universe", "Bouton « retourner dans l'univers »", "Retourner dans mon univers", "atelier"),
+            ("atelier_home_short", "Bouton « accueil » (version courte, mobile)", "Accueil", "atelier"),
+            ("atelier_universe_short", "Bouton « univers » (version courte, mobile)", "Univers", "atelier"),
+            ("contact_copied", "Message après « copier l'adresse »", "Adresse copiée", "atelier"),
             ("colophon", "Mention finale", "Conçu et développé par Nick Kakaye · Abidjan", "pied"),
             # Navigation & pied de page
             ("nav_projects", "Menu : Projets", "Projets", "navigation"),
@@ -239,9 +318,24 @@ class Command(BaseCommand):
             ("footer_line", "Ligne du pied de page", "© 2026 Nick Kakaye. Conçu et développé.", "pied"),
         ]
         for key, label, value, group in texts:
-            SiteText.objects.update_or_create(
+            obj, created = SiteText.objects.get_or_create(
                 key=key, defaults={"label": label, "value": value, "group": group},
             )
+            if created:
+                continue
+            # L'emplacement (libellé, groupe) suit toujours le code ; la VALEUR n'est
+            # écrasée qu'avec --reset, pour ne jamais perdre tes modifications d'admin.
+            changed = []
+            if obj.label != label:
+                obj.label = label; changed.append("label")
+            if obj.group != group:
+                obj.group = group; changed.append("group")
+            if self.reset and obj.value != value:
+                obj.value = value; changed.append("value")
+            if changed:
+                obj.save(update_fields=changed)
+        # Textes qui ne s'affichaient plus nulle part : on les retire de l'admin.
+        SiteText.objects.filter(key__in=OBSOLETE_TEXT_KEYS).delete()
 
     def seed_nav(self):
         links = [
@@ -253,7 +347,7 @@ class Command(BaseCommand):
             (6, "Contact", "#cta", False, True),
         ]
         for order, label, anchor, in_nav, in_drawer in links:
-            NavItem.objects.update_or_create(
+            self.upsert(NavItem).update_or_create(
                 order=order,
                 defaults=dict(label=label, anchor=anchor, show_in_nav=in_nav, show_in_drawer=in_drawer),
             )
@@ -261,12 +355,12 @@ class Command(BaseCommand):
     def seed_marquee(self):
         words = ["IA locale & cloud", "Mobile", "Vision par ordinateur", "Réseaux", "Web", "Jeux"]
         for i, text in enumerate(words, start=1):
-            MarqueeItem.objects.update_or_create(order=i, defaults={"text": text})
+            self.upsert(MarqueeItem).update_or_create(order=i, defaults={"text": text})
 
     def seed_manifesto_stats(self):
         stats = [(6, "Projets menés"), (5, "Certifications"), (10, "Technologies"), (3, "Années d'atelier")]
         for i, (value, label) in enumerate(stats, start=1):
-            ManifestoStat.objects.update_or_create(order=i, defaults={"value": value, "label": label})
+            self.upsert(ManifestoStat).update_or_create(order=i, defaults={"value": value, "label": label})
 
     def seed_focus_items(self):
         items = [
@@ -278,7 +372,7 @@ class Command(BaseCommand):
              "donner vie à une idée, quel que soit le terrain."),
         ]
         for i, (title, body) in enumerate(items, start=1):
-            FocusItem.objects.update_or_create(order=i, defaults={"title": title, "body": body})
+            self.upsert(FocusItem).update_or_create(order=i, defaults={"title": title, "body": body})
 
     def seed_contact_items(self):
         items = [
@@ -288,7 +382,7 @@ class Command(BaseCommand):
             ("Remonter", "#home", False),
         ]
         for i, (label, value, copyable) in enumerate(items, start=1):
-            ContactItem.objects.update_or_create(
+            self.upsert(ContactItem).update_or_create(
                 order=i, defaults={"label": label, "value": value, "copyable": copyable},
             )
 

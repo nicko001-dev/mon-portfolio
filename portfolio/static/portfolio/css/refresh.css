@@ -1,0 +1,16 @@
+/* Indicateur du geste « tirer pour actualiser » (accueil mobile) — voir js/refresh.js */
+.ptr{
+  position:fixed; top:max(10px,env(safe-area-inset-top,0px)); left:50%; z-index:990;
+  width:46px; height:46px; margin-left:-23px; border-radius:50%;
+  display:grid; place-items:center; pointer-events:none;
+  color:#fff; background:#15152b; border:1.5px solid rgba(167,139,250,.7);
+  box-shadow:0 10px 28px rgba(0,0,0,.65);
+  opacity:0; transform:translateY(-70px);
+}
+.ptr svg{width:22px;height:22px;transition:transform .2s}
+.ptr.is-anim{transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .28s}
+.ptr.is-ready{color:#ffc94a;border-color:#ffc94a}
+.ptr.is-ready svg{transform:rotate(180deg)}
+.ptr.is-loading svg{animation:ptrSpin .8s linear infinite}
+@keyframes ptrSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ptr.is-loading svg{animation:none}.ptr,.ptr svg{transition:none}}

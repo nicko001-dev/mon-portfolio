@@ -1,5 +1,5 @@
 {% extends "portfolio/base.html" %}
-{% load static %}
+{% load static portfolio_tags %}
 {% block content %}
 
 <!-- ============================================================
@@ -23,7 +23,7 @@
         preload="auto"
       >
         <source
-          src="https://strvid.nyc3.cdn.digitaloceanspaces.com/cloudinary/portfolio_hero_bg_zuhahj.webm"
+          src="{{ txt.home_video_url|default:'https://strvid.nyc3.cdn.digitaloceanspaces.com/cloudinary/portfolio_hero_bg_zuhahj.webm' }}"
           type="video/webm"
         />
       </video>
@@ -94,7 +94,7 @@
         <span class="ph-badge" id="ph-badge">{{ txt.hs_transmission|default:"TRANSMISSION STELLAIRE" }}</span>
         <span class="ph-name" id="ph-name">{{ txt.hs_planet_default|default:"PLANÈTE" }}</span>
       </div>
-      <p class="ph-desc" id="ph-desc">Détails</p>
+      <p class="ph-desc" id="ph-desc">{{ txt.hs_planet_desc_default|default:"Détails" }}</p>
     </div>
 
     <!-- Interface HUD du vaisseau (en bas) -->
@@ -103,14 +103,11 @@
         <div class="hud-box controls-guide">
           <div class="cg-desk">
             <span class="hud-tag">{{ txt.hs_cmds_pc_tag|default:"[COMMANDES PC]" }}</span><br>
-            <b>[MOLETTE]</b> Propulsion · <b>[ZQSD / WASD]</b> Translation<br>
-            <b>[CLIC + GLISSER]</b> Vue 360° · <b>[ESPACE / C]</b> Monter / Descendre<br>
-            <b>[MAJ]</b> Turbo · <b>[M]</b> Son
+            {{ txt.hs_cmds_pc_body|default:"[MOLETTE] Propulsion · [ZQSD / WASD] Translation\n[CLIC + GLISSER] Vue 360° · [ESPACE / C] Monter / Descendre\n[MAJ] Turbo · [M] Son"|bracket_bold }}
           </div>
           <div class="cg-touch">
             <span class="hud-tag">{{ txt.hs_cmds_touch_tag|default:"[COMMANDES TACTILES]" }}</span><br>
-            <b>[JOYSTICK]</b> Déplacement · <b>[GLISSER]</b> Regarder autour à 360°<br>
-            <b>[▲ / ▼]</b> Hauteur
+            {{ txt.hs_cmds_touch_body|default:"[JOYSTICK] Déplacement · [GLISSER] Regarder autour à 360°\n[▲ / ▼] Hauteur"|bracket_bold }}
           </div>
         </div>
       </div>
@@ -161,7 +158,7 @@
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
         <span class="nav-btn-lbl-full">{{ txt.atelier_home|default:"Revenir à l'accueil" }}</span>
-        <span class="nav-btn-lbl-short">Accueil</span>
+        <span class="nav-btn-lbl-short">{{ txt.atelier_home_short|default:"Accueil" }}</span>
       </button>
 
       <button class="tt-btn tt-universe" id="btn-return-universe" type="button" aria-label="Retourner dans mon univers">
@@ -170,7 +167,7 @@
           <path d="M12 8v8M8 12h8"/>
         </svg>
         <span class="nav-btn-lbl-full">{{ txt.atelier_universe|default:"Retourner dans mon univers" }}</span>
-        <span class="nav-btn-lbl-short">Univers</span>
+        <span class="nav-btn-lbl-short">{{ txt.atelier_universe_short|default:"Univers" }}</span>
       </button>
     </nav>
 
@@ -306,8 +303,8 @@
             {% for c in certifications %}
             <div class="cert-item">
               <button class="cert-btn" type="button"
-                      data-full="{% static c.image_full %}"
-                      data-thumb="{% static c.image_thumb %}"
+                      data-full="{{ c.image_full_url }}"
+                      data-thumb="{{ c.image_thumb_url }}"
                       data-title="{{ c.title }}" data-org="{{ c.org }}" data-date="{{ c.date }}"
                       aria-label="Voir le certificat : {{ c.title }}, {{ c.org }}, {{ c.date }}">
                 <span class="c-num">{{ forloop.counter|stringformat:"02d" }}</span>
@@ -332,7 +329,7 @@
               <h4>{{ c.label }}</h4>
               {% if c.copyable %}
               <a href="{{ c.href }}">{{ c.value }}</a>
-              <button class="copy-link" id="copyBtn" data-email="{{ c.href }}" type="button">
+              <button class="copy-link" id="copyBtn" data-email="{{ c.href }}" data-copied="{{ txt.contact_copied|default:'Adresse copiée' }}" type="button">
                 <span id="copyLbl">{{ txt.contact_copy|default:"Copier l'adresse" }}</span>
               </button>
               {% elif c.is_anchor %}
@@ -355,7 +352,7 @@
             <div data-reveal style="--rd:.16s">
               <h4>Écrire</h4>
               <a href="mailto:{{ profile.email }}">{{ txt.header_cta|default:"Me contacter" }}</a>
-              <button class="copy-link" id="copyBtn" data-email="{{ profile.email }}" type="button">
+              <button class="copy-link" id="copyBtn" data-email="{{ profile.email }}" data-copied="{{ txt.contact_copied|default:'Adresse copiée' }}" type="button">
                 <span id="copyLbl">{{ txt.contact_copy|default:"Copier l'adresse" }}</span>
               </button>
             </div>

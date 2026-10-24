@@ -10,3 +10,4 @@ kilo/
 .qodo/
 *.sqlite3-journal
 .DS_Store
+media/

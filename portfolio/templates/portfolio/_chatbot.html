@@ -1,0 +1,61 @@
+{% comment %}
+  Assistant IA : bulle de chat flottante. Réglages dans l'admin → « Assistant IA ».
+  ATTENTION : n'écris jamais « {# ... #} » sur plusieurs lignes (Django ne le supporte que sur
+  une seule ligne) et ne cite pas de balises HTML dans un commentaire visible : le navigateur
+  les interpréterait comme de vraies balises.
+  Pas de <header>/<section> dans ce fichier : style.css leur applique des règles globales.
+{% endcomment %}
+{% if chatbot.enabled %}
+{{ chatbot|json_script:"chatbot-config" }}
+<div id="chatbot" class="cb" data-csrf="{{ csrf_token }}" data-screen="home">
+  <div class="cb-backdrop" id="cb-backdrop" aria-hidden="true"></div>
+
+  <button class="cb-toggle" id="cb-toggle" type="button" aria-expanded="false"
+          aria-controls="cb-panel" aria-label="Ouvrir le chat avec {{ chatbot.name }}"
+          title="Sur mobile, maintenir puis faire glisser pour déplacer le bouton dans l'univers">
+    <span class="cb-ring" aria-hidden="true"></span>
+    <span class="cb-ring cb-ring-2" aria-hidden="true"></span>
+    <span class="cb-ic-wrap" aria-hidden="true">
+      <svg class="cb-ic cb-ic-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 11.5a8.5 8.5 0 0 1-12.2 7.6L3.5 20.5l1.5-4.9A8.5 8.5 0 1 1 21 11.5Z"/>
+        <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" stroke-width="2.6"/>
+      </svg>
+      <svg class="cb-ic cb-ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+           stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      <span class="cb-badge">IA</span>
+    </span>
+    <span class="cb-toggle-lbl">{{ chatbot.name }}</span>
+    <span class="cb-alert" id="cb-alert" hidden>{{ chatbot.alertText }}</span>
+  </button>
+
+  <div class="cb-panel" id="cb-panel" hidden role="dialog" aria-modal="false" aria-labelledby="cb-title">
+    <div class="cb-head">
+      <span class="cb-avatar" aria-hidden="true">IA<i class="cb-dot"></i></span>
+      <div class="cb-head-txt">
+        <b id="cb-title">{{ chatbot.name }}</b>
+        <span>{{ chatbot.subtitle }}</span>
+      </div>
+      <button class="cb-close" id="cb-close" type="button" aria-label="Fermer le chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="cb-log" id="cb-log" role="log" aria-live="polite" aria-relevant="additions"></div>
+    <div class="cb-chips" id="cb-chips"></div>
+
+    <form class="cb-form" id="cb-form" autocomplete="off">
+      <label class="sr-only" for="cb-input">Votre message</label>
+      <textarea id="cb-input" rows="1" maxlength="{{ chatbot.maxChars }}"
+                placeholder="{{ chatbot.placeholder }}" enterkeyhint="send"></textarea>
+      <button class="cb-send" id="cb-send" type="submit" aria-label="Envoyer le message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14M13 6l6 6-6 6"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}

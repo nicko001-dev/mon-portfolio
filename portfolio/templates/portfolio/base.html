@@ -1,4 +1,4 @@
-{% load static %}
+{% load static portfolio_tags %}
 <!doctype html>
 <html lang="fr">
   <head>
@@ -9,10 +9,10 @@
     />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#07070c" />
-    <title>{% block title %}Nick Kakaye — Portfolio{% endblock %}</title>
+    <title>{% block title %}{{ txt.seo_title|default:"Nick Kakaye — Portfolio" }}{% endblock %}</title>
     <meta
       name="description"
-      content="Nick Kakaye — étudiant Système Informatique et Génie Logiciel à l'ESATIC (Abidjan). IA locale, développement mobile et logiciels construits de bout en bout."
+      content="{{ txt.seo_description|default:'Nick Kakaye — étudiant Système Informatique et Génie Logiciel à l\'ESATIC (Abidjan). IA locale, développement mobile et logiciels construits de bout en bout.' }}"
     />
     <link
       rel="icon"
@@ -25,6 +25,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="{% static 'portfolio/css/style.css' %}" />
+    <link rel="stylesheet" href="{% static 'portfolio/css/chatbot.css' %}" />
+    <link rel="stylesheet" href="{% static 'portfolio/css/refresh.css' %}" />
     {% block extra_head %}{% endblock %}
   </head>
   <body>
@@ -58,13 +60,13 @@
           <button
             class="avatar-chip avatar-trigger"
             type="button"
-            data-full="{% static profile.photo_full %}"
+            data-full="{{ profile.photo_full_url }}"
             data-title="{{ profile.name }}"
             data-org="{{ profile.role }} — {{ profile.school }}"
             aria-label="Voir la photo de {{ profile.name }}"
           >
             <img
-              src="{% static profile.photo_thumb %}"
+              src="{{ profile.photo_thumb_url }}"
               alt=""
               decoding="async"
             />
@@ -194,7 +196,11 @@
       </button>
     </div>
 
+    {% include "portfolio/_chatbot.html" %}
+
     {% block extra_scripts %}{% endblock %}
     <script src="{% static 'portfolio/js/main.js' %}" defer></script>
+    <script src="{% static 'portfolio/js/chatbot.js' %}" defer></script>
+    <script src="{% static 'portfolio/js/refresh.js' %}" defer></script>
   </body>
 </html>

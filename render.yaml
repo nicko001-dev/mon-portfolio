@@ -6,7 +6,7 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py seed_portfolio"
-    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 120"
     envVars:
       - key: PYTHON_VERSION
         value: "3.13.1"
@@ -27,3 +27,13 @@ services:
         value: "nickkakaye4@gmail.com"
       - key: DJANGO_SUPERUSER_PASSWORD
         sync: false
+      # Assistant IA : colle ta clé OpenRouter dans le tableau de bord Render (secret).
+      - key: OPENROUTER_API_KEY
+        sync: false
+      # Optionnel : deuxième fournisseur gratuit pour le secours automatique.
+      - key: GROQ_API_KEY
+        sync: false
+# Attention (plan gratuit) : le disque de Render est éphémère. La base SQLite et les
+# images téléversées depuis l'admin sont perdues à chaque redéploiement.
+# Pour un contenu durable, héberge sur PythonAnywhere (voir README) ou ajoute un
+# disque persistant / une base PostgreSQL.

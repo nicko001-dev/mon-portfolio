@@ -277,12 +277,13 @@ $$('a[href^="#"]').forEach(a => {
 
 $('#copyBtn')?.addEventListener('click', async () => {
   const addr = $('#copyBtn').dataset.email, lab = $('#copyLbl');
+  const idle = lab._idle || (lab._idle = lab.textContent);
   try { await navigator.clipboard.writeText(addr); }
   catch (_) {
     const t = document.createElement('textarea'); t.value = addr; t.style.position = 'fixed'; t.style.opacity = '0';
     document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (__) {} t.remove();
   }
-  lab.textContent = 'Adresse copiée';
-  clearTimeout(lab._t); lab._t = setTimeout(() => { lab.textContent = "Copier l'adresse"; }, 2200);
+  lab.textContent = $('#copyBtn').dataset.copied || 'Adresse copiée';
+  clearTimeout(lab._t); lab._t = setTimeout(() => { lab.textContent = idle; }, 2200);
 });
 })();

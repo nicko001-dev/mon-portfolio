@@ -31,6 +31,20 @@
   let DATA = {};
   try { DATA = JSON.parse(($('hs-data') || {}).textContent || '{}'); }
   catch (e) { DATA = {}; }
+  // Textes affichés par le JS — modifiables dans l'admin (Univers 3D · textes, commandes et messages).
+  const UI = Object.assign({
+    discovery: 'DÉCOUVERTE', warpTitle: 'HORIZON FRANCHI', warpText: 'Entrée dans l\'Atelier...',
+    welcomeTitle: 'BIENVENUE DANS L\'UNIVERS', welcomeText: 'Quête : Trouve le trou noir pour accéder à l\'Atelier !',
+    returnTitle: 'RETOUR DANS L\'UNIVERS', returnText: 'Cap maintenu vers les étoiles.', target: 'CIBLE', speed: 'VITESSE'
+  }, DATA.ui || {});
+  // Textes des astres — modifiables dans l'admin (Univers 3D · astres). Si un astre est
+  // absent de l'admin, on garde le texte par défaut écrit ici.
+  const BODY = {};
+  (DATA.bodies || []).forEach(b => { BODY[b.key] = b; });
+  const tx = (key, d) => {
+    const b = BODY[key];
+    return b ? { name: b.name || d.name, sub: b.sub || '', info: b.info || '' } : d;
+  };
 
   const TAU = Math.PI * 2;
   const R = (a, b) => a + Math.random() * (b - a);
@@ -205,6 +219,7 @@
 
   /* ───────────────────────── Planètes ───────────────────────── */
   function planet(o) {
+    o = Object.assign({}, o, tx(o.key, o));
     const g = new THREE.Group(); g.position.set(...o.pos);
     const body = new THREE.Mesh(
       new THREE.SphereGeometry(o.r, 48, 32),
@@ -336,18 +351,23 @@
     const sl = new THREE.PointLight(0xfff0d0, 1.8, 8000); sl.position.copy(sunP); scene.add(sl);
 
     // Label 3D au-dessus du Soleil
-    const sunLabel = makeHoloLabel("SOLEIL ALPHA", "NICK KAKAYE · INGÉNIERIE & IA", "#ffd47a");
+    const sunT = tx('sun', {
+      name: 'SOLEIL ALPHA', sub: 'NICK KAKAYE · INGÉNIERIE & IA',
+      info: "Étudiant en Système Informatique & Génie Logiciel à l'ESATIC (Abidjan). Concepteur de solutions IA et logicielles."
+    });
+    const sunLabel = makeHoloLabel(sunT.name, sunT.sub, "#ffd47a");
     sunLabel.position.set(sunP.x, sunP.y + 520, sunP.z);
     scene.add(sunLabel);
-    addPoi('SOLEIL ALPHA', 'Étoile naine jaune, foyer central du portfolio.', sunP, 400, 430);
+    addPoi(sunT.name, 'Étoile naine jaune, foyer central du portfolio.', sunP, 400, 430);
     bodies.push({
-      pos: sunP, r: 430, name: "SOLEIL ALPHA", sub: "NICK KAKAYE",
-      info: "Étudiant en Système Informatique & Génie Logiciel à l'ESATIC (Abidjan). Concepteur de solutions IA et logicielles.",
+      pos: sunP, r: 430, name: sunT.name, sub: sunT.sub,
+      info: sunT.info,
       type: 'planet'
     });
 
     // 6. Planètes représentant chacune une facette clé de Nick Kakaye
     planet({
+      key: 'saturnia',
       name: 'SATURNIA',
       sub: 'FORMATION ESATIC',
       desc: 'Diplôme et parcours universitaire.',
@@ -358,6 +378,7 @@
     });
 
     planet({
+      key: 'verdania',
       name: 'VERDANIA',
       sub: 'CE QUI M\'ANIME',
       desc: 'Vision et passion technologique.',
@@ -368,6 +389,7 @@
     });
 
     planet({
+      key: 'jovis9',
       name: 'JOVIS-9',
       sub: 'COMPÉTENCES CLÉS',
       desc: 'Boîte à outils et technologies maîtrisées.',
@@ -378,6 +400,7 @@
     });
 
     planet({
+      key: 'ignis',
       name: 'IGNIS',
       sub: 'CERTIFICATIONS',
       desc: 'Reconnaissances et diplômes certifiés.',
@@ -388,6 +411,7 @@
     });
 
     planet({
+      key: 'cryos',
       name: 'CRYOS',
       sub: 'CONTACT & STAGE',
       desc: 'Disponibilité professionnelle.',
@@ -453,7 +477,8 @@
     }
 
     // Label 3D au-dessus du trou noir
-    const bhLabel = makeHoloLabel("SINGULARITÉ", "PORTE VERS L'ATELIER", "#ffcc00");
+    const bhT = tx('blackhole', { name: 'SINGULARITÉ', sub: "PORTE VERS L'ATELIER" });
+    const bhLabel = makeHoloLabel(bhT.name, bhT.sub, "#ffcc00");
     bhLabel.position.set(0, 360, 0);
     bh.add(bhLabel);
 
@@ -501,7 +526,7 @@
       bhBeacon.rotation.y += .15 * dt;
       bhGlow.scale.setScalar(1300 + Math.sin(t * 3) * 150);
     });
-    addPoi('SINGULARITÉ', 'Porte d\'accès vers l\'Atelier. Rentre dedans pour franchir le seuil.', bhPos, 200, 0);
+    addPoi(bhT.name, 'Porte d\'accès vers l\'Atelier. Rentre dedans pour franchir le seuil.', bhPos, 200, 0);
 
     // 8. Galaxie spirale
     const N = 12000, gp = new Float32Array(N * 3), gc = new Float32Array(N * 3), ca = new THREE.Color(0xc8b8a0), cb = new THREE.Color(0x7088b8), cc = new THREE.Color();
@@ -518,7 +543,7 @@
     gal.position.set(4500, 2200, -9000); gal.rotation.set(.9, 0, .3);
     scene.add(gal);
     anim.push((t, dt) => gpts.rotation.y += .02 * dt);
-    addPoi('GALAXIE SPIRALE', 'Cent millions d\'étoiles en rotation silencieuse.', gal.position, 1800, 0);
+    addPoi(tx('galaxy', { name: 'GALAXIE SPIRALE' }).name, 'Cent millions d\'étoiles en rotation silencieuse.', gal.position, 1800, 0);
 
     // 9. Station orbitale
     const st = new THREE.Group(), M = new THREE.MeshStandardMaterial({ color: 0x99a4b5, metalness: .8, roughness: .35 }), wheel = new THREE.Group();
@@ -531,10 +556,11 @@
     st.position.set(-1100, 400, -2800); st.rotation.set(.4, .6, 0); scene.add(st);
     anim.push((t, dt) => { wheel.rotation.z += .25 * dt; b1.material.opacity = Math.sin(t * 4) > 0 ? 1 : .1; b2.material.opacity = Math.sin(t * 4 + 2) > 0 ? 1 : .1; });
 
-    const stLabel = makeHoloLabel("ARCHE ORBITALE", "ATELIER & EXPERTISE", "#2dd4bf");
+    const stT = tx('station', { name: 'ARCHE ORBITALE', sub: 'ATELIER & EXPERTISE' });
+    const stLabel = makeHoloLabel(stT.name, stT.sub, "#2dd4bf");
     stLabel.position.set(0, 190, 0);
     st.add(stLabel);
-    addPoi('ARCHE ORBITALE', 'Station habitée. Base avancée de recherche.', st.position, 130, 150);
+    addPoi(stT.name, 'Station habitée. Base avancée de recherche.', st.position, 130, 150);
 
     for (let i = 0; i < 2; i++) {
       const d = new THREE.Group(); d.add(new THREE.Mesh(new THREE.ConeGeometry(6, 28, 6).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: .7, roughness: .3 })));
@@ -553,7 +579,7 @@
       astD.push({ p: [Math.cos(a) * r, R(-140, 140) - 200, Math.sin(a) * r - 4800], s: R(6, 45), k: [R(.5, 1.4), R(.5, 1.4)], r: [R(0, TAU), R(0, TAU), R(0, TAU)], v: R(-.5, .5) });
     }
     scene.add(asteroids);
-    addPoi('CEINTURE KUIPER-X', 'Des milliers de roches à frôler en pilotant avec soin.', [0, -200, -3000], 150, 0);
+    addPoi(tx('kuiper', { name: 'CEINTURE KUIPER-X' }).name, 'Des milliers de roches à frôler en pilotant avec soin.', [0, -200, -3000], 150, 0);
 
     // 11. Forêt de cristaux
     const cg = new THREE.Group(), cm = new THREE.InstancedMesh(new THREE.OctahedronGeometry(1), new THREE.MeshBasicMaterial({ transparent: true, opacity: .3, blending: THREE.AdditiveBlending, depthWrite: false }), 40), col = new THREE.Color();
@@ -564,7 +590,7 @@
     }
     cg.add(cm); cg.position.set(-1300, -250, -8200); scene.add(cg);
     anim.push((t, dt) => cg.rotation.y += .05 * dt);
-    addPoi('CRISTAUX D\'ÉTHER', 'Cristaux vivants qui chantent à basse fréquence.', cg.position, 450, 0);
+    addPoi(tx('crystals', { name: "CRISTAUX D'ÉTHER" }).name, 'Cristaux vivants qui chantent à basse fréquence.', cg.position, 450, 0);
 
     // 12. Comètes
     for (let i = 0; i < 2; i++) {
@@ -770,7 +796,7 @@
   function warpToAtelier() {
     if (warping) return;
     warping = true;
-    toast('HORIZON FRANCHI', 'Entrée dans l\'Atelier...');
+    toast(UI.warpTitle, UI.warpText);
     if (flash) flash.style.opacity = '1';
     setTimeout(() => {
       switchUI('c');
@@ -898,15 +924,15 @@
         if (d < nd) { nd = d; near = p; }
         if (!p.found && d < p.r * 3 + 400) {
           p.found = true;
-          toast('DÉCOUVERTE', p.name);
+          toast(UI.discovery, p.name);
         }
       });
 
       if (targetInfo && near) {
-        targetInfo.innerText = `CIBLE : ${near.name} · ${Math.round(nd)} u`;
+        targetInfo.innerText = `${UI.target} : ${near.name} · ${Math.round(nd)} u`;
       }
       if (speedometer) {
-        speedometer.innerText = `VITESSE: ${(sp / 100).toFixed(2)}`;
+        speedometer.innerText = `${UI.speed}: ${(sp / 100).toFixed(2)}`;
       }
 
       drawRadar();
@@ -994,7 +1020,7 @@
       setTimeout(() => {
         switchUI('b');
         if (flash) flash.style.opacity = '0';
-        toast('BIENVENUE DANS L\'UNIVERS', 'Quête : Trouve le trou noir pour accéder à l\'Atelier !');
+        toast(UI.welcomeTitle, UI.welcomeText);
       }, 350);
     });
   }
@@ -1030,7 +1056,7 @@
         vel.set(0, 0, 0);
         switchUI('b');
         if (flash) flash.style.opacity = '0';
-        toast('RETOUR DANS L\'UNIVERS', 'Cap maintenu vers les étoiles.');
+        toast(UI.returnTitle, UI.returnText);
       }, 350);
     });
   }
